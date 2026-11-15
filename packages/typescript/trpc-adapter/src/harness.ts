@@ -39,10 +39,20 @@ ${aliases}
 `;
 }
 
-/** './router.ts' -> './router' (extensionless relative import for the harness). */
-export function entryImportPath(tsconfigDir: string, entryAbsolute: string): string {
-  const rel = relative(tsconfigDir, entryAbsolute).replace(/\.ts$/, '');
-  return rel.startsWith('.') ? rel : `./${rel}`;
+/**
+ * './router.ts' -> './router' (bundler-style), or './router.js' under
+ * node16/nodenext resolution, where extensionless relative imports are
+ * illegal (TS5097) and the TS-standard '.js' specifier resolves to the .ts
+ * source with or without allowImportingTsExtensions.
+ */
+export function entryImportPath(
+  tsconfigDir: string,
+  entryAbsolute: string,
+  resolution?: 'node16' | 'nodenext',
+): string {
+  const rel = relative(tsconfigDir, entryAbsolute);
+  const specifier = resolution === undefined ? rel.replace(/\.ts$/, '') : rel.replace(/\.ts$/, '.js');
+  return specifier.startsWith('.') ? specifier : `./${specifier}`;
 }
 
 import { relative } from 'node:path';

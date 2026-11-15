@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --experimental-strip-types src/server.ts",
+    "dev": "node src/server.ts",
     "child": "node scripts/server-child.mjs"
   },
   "dependencies": {

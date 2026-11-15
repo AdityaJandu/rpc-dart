@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- Full `tsconfig.json` independence in type extraction: projects using `moduleResolution: node16` / `nodenext` extract correctly, with the harness emitting explicit `.js` / `.mjs` / `.cjs` entry specifiers (including `.tsx`).
+- Build/lint-only compiler options are neutralized during extraction regardless of the user's tsconfig (`noEmit`, `declaration`, `declarationMap`, `composite`, `incremental`, `isolatedDeclarations`, `noUnusedLocals`, `noUnusedParameters`, `rootDir`), so flags like `noUnusedLocals: true` or a `composite`/`rootDir: './src'` build config can no longer fail contract extraction.
+- Extraction verified across five backend tsconfig profiles (CommonJS + node10, ESNext + bundler, NodeNext, NodeNext + `verbatimModuleSyntax` + `erasableSyntaxOnly` + `allowImportingTsExtensions`, and composite build flags) via new table-driven tests.
+
 ## 0.1.3
 
 - Package README documentation with absolute links for registry viewing.

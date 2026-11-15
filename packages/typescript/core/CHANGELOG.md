@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Synchronized v0.1.4 lockstep release with the tsconfig-independent extractor.
+
 ## 0.1.3
 
 - Package README documentation with absolute links for registry viewing.

@@ -295,6 +295,21 @@ describe('zero-config CLI experience', () => {
   });
 });
 
+describe('generate output is dart-format stable', () => {
+  it('emits Dart that `dart format --set-exit-if-changed` leaves untouched', () => {
+    // throws (non-zero exit) when any generated file needs reformatting
+    execFileSync('dart', ['format', '--output=none', '--set-exit-if-changed', outDir]);
+  });
+
+  it('stays check-clean when a consumer runs dart format afterwards', async () => {
+    // The release gate formats generated trees; the manifest hashes must
+    // reflect on-disk content, not pre-format emitter bytes.
+    execFileSync('dart', ['format', outDir], { stdio: 'ignore' });
+    const result = await checkContract(generateOptions());
+    expect(result.ok, result.problems.join('; ')).toBe(true);
+  });
+});
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

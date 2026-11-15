@@ -28,8 +28,8 @@ Add `trpc_flutter` and `trpc_dart` to your `pubspec.yaml`:
 dependencies:
   flutter:
     sdk: flutter
-  trpc_dart: ^0.1.3
-  trpc_flutter: ^0.1.3
+  trpc_dart: ^0.1.4
+  trpc_flutter: ^0.1.4
 ```
 
 Then run:

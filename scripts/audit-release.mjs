@@ -43,7 +43,7 @@ check('version-lockstep', () => {
   if (all.some((v) => v !== all[0])) {
     throw new Error(`versions differ: npm [${npm.join(', ')}] dart [${dart.join(', ')}]`);
   }
-  if (all[0] !== '0.1.3') throw new Error(`expected 0.1.3, got ${all[0]}`);
+  if (!/^\d+\.\d+\.\d+$/.test(all[0] ?? '')) throw new Error(`invalid version: ${all[0]}`);
   return `all 6 packages at ${all[0]}`;
 });
 
@@ -152,8 +152,10 @@ check('dart-packaging', () => {
   }
 
   const flutterPubspec = readFileSync(path.join(ROOT, 'packages/dart/trpc_flutter/pubspec.yaml'), 'utf-8');
-  if (!/trpc_dart:\s*\^0\.1\.3/.test(flutterPubspec)) {
-    throw new Error('trpc_flutter/pubspec.yaml must declare hosted constraint trpc_dart: ^0.1.3');
+  const flutterVersion = /^version:\s*(.+)$/m.exec(flutterPubspec)?.[1]?.trim();
+  const constraint = `^${flutterVersion}`;
+  if (!new RegExp(`trpc_dart:\\s*\\^${flutterVersion.replaceAll('.', '\\.')}\\b`).test(flutterPubspec)) {
+    throw new Error(`trpc_flutter/pubspec.yaml must declare hosted constraint trpc_dart: ${constraint}`);
   }
   if (/publish_to:\s*none/.test(flutterPubspec)) {
     throw new Error('trpc_flutter/pubspec.yaml must not contain publish_to: none');

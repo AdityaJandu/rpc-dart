@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- Ships the tsconfig-independent extractor: `generate` / `check` / `watch` / `diff` / `doctor` now work on any backend tsconfig, including `Node16` / `NodeNext` resolution with `verbatimModuleSyntax` and build/lint flags like `noUnusedLocals` or `rootDir` set.
+- `generate` (and `watch`) now run `dart format` over the emitted tree when a Dart SDK is available and record post-format content hashes, so generated output is stable under `dart format --set-exit-if-changed` and `rpc-dart check` stays exact on formatted trees. Best-effort: without a Dart SDK the raw emitter bytes are kept, still self-consistent.
+- Generator version bump to v0.1.4 matching monorepo lockstep.
+
 ## 0.1.3
 
 - Flagship npm README with full CLI command reference and configuration options.

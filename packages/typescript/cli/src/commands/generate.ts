@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { extractContract } from '@rpc-dart/trpc-adapter';
 import { emit } from '@rpc-dart/dart-generator';
 
@@ -75,7 +77,11 @@ export async function generate(options: GenerateOptions): Promise<GenerateResult
       : content;
   }
   const written: string[] = [];
+  const manifestRel = 'generated.rpc-dart.json';
+  // Manifest goes last: code files first, then post-format hashing, so the
+  // recorded content hashes match what `check` will see on disk.
   for (const [rel, content] of Object.entries(files)) {
+    if (rel === manifestRel) continue;
     const target = path.join(options.outDir, rel);
     mkdirSync(path.dirname(target), { recursive: true });
     const tmp = `${target}.tmp`;
@@ -83,6 +89,22 @@ export async function generate(options: GenerateOptions): Promise<GenerateResult
     renameSync(tmp, target);
     written.push(rel);
   }
+
+  // dart-format the emitted tree so generated output is stable under the
+  // standard `dart format --set-exit-if-changed` gate. Best-effort: when no
+  // Dart SDK is available the raw emitter bytes stay on disk (still
+  // self-consistent, since the manifest hashes whatever was written).
+  if (dartFormat(written.map((rel) => path.join(options.outDir, rel)))) {
+    for (const file of manifestRaw.files) {
+      const target = path.join(options.outDir, file.path);
+      file.contentSha256 = createHash('sha256').update(readFileSync(target, 'utf-8')).digest('hex');
+    }
+  }
+  const manifestTarget = path.join(options.outDir, manifestRel);
+  const manifestTmp = `${manifestTarget}.tmp`;
+  writeFileSync(manifestTmp, `${JSON.stringify(manifestRaw, null, 2)}\n`);
+  renameSync(manifestTmp, manifestTarget);
+  written.push(manifestRel);
 
   // Stale cleanup: committed files from the previous manifest that the new
   // emission no longer contains (crash-safe: cleanup happens after a
@@ -105,4 +127,15 @@ import { rmSync } from 'node:fs';
 
 function rmLocal(target: string): void {
   rmSync(target);
+}
+
+/** Best-effort `dart format` over the emitted files; true only when it ran and succeeded. */
+function dartFormat(targets: string[]): boolean {
+  if (targets.length === 0) return false;
+  try {
+    execFileSync('dart', ['format', ...targets], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
 }

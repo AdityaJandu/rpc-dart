@@ -31,7 +31,7 @@ Add `trpc_dart` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.1.3
+  trpc_dart: ^0.1.4
 ```
 
 Then run:

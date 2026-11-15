@@ -1,6 +1,6 @@
 {
   "irHash": "sha256-41728e69d7d1efe9436d9ec96f5d00104c44f93b213bc6e0fb3b117428446a13",
-  "generatorVersion": "0.1.3",
+  "generatorVersion": "0.1.4",
   "protocol": {
     "kind": "trpc",
     "version": "11",
@@ -9,71 +9,71 @@
   "files": [
     {
       "path": "api.dart",
-      "contentSha256": "b52d9843016da4ec1d90a298223c244209ca7907adfa60380ce9ee36c503b42b"
+      "contentSha256": "a70575393d1d5d91d8950b28192f4116811e8390d4f8882fa103fc47d7a9ff53"
     },
     {
       "path": "models/health_output.dart",
-      "contentSha256": "4766c2c4c942ff8c6df88b50b14041ed99b907962fa774a052783df752b2ef93"
+      "contentSha256": "090f9530b8ebe8e1019a89aafd1d329764f0e1433a4f683a09caf67087f16f75"
     },
     {
       "path": "models/posts_list_input.dart",
-      "contentSha256": "38055d9fc631811e9eb7176fe67c64b64dfd69b5a6cd42e68018980ac3e7e88d"
+      "contentSha256": "7c6bdb2e2b987c19cbeaffd82ea2bf4c38b6586ba33ec4191b552337ea5c8d79"
     },
     {
       "path": "models/posts_list_input_sort.dart",
-      "contentSha256": "fb2403a80cef63ae256f7341f650562255d801edf4ae96d4b58058282c521fd0"
+      "contentSha256": "afa0c003adecc7a791b17fbd64665bf9e9688a440cd64685956dee5db19d072f"
     },
     {
       "path": "models/posts_list_output.dart",
-      "contentSha256": "3cefaa8f2e3669f5f3629034bbc8ea195df2859852676d820ff5c88b8ef1a003"
+      "contentSha256": "d3ea6c9a31e6669cf79da78b0520848f70013413e877187f6875e176cb992d03"
     },
     {
       "path": "models/posts_list_output_items_item.dart",
-      "contentSha256": "cf8e848a39428879b9e33158e86eceef24927c5862844381ec60b9bf77476b3c"
+      "contentSha256": "85cd12c4353fbef11ba37676fbf19f2cedecaf7ff7f2731a5c1d7767e6c690b6"
     },
     {
       "path": "models/user_get_by_id_input.dart",
-      "contentSha256": "0234f07e2b30641dd72c8fa9b37bb0c568a0562d7c9c9b5561f723557376e011"
+      "contentSha256": "f758e2edd6f726f9d4c2fa3c891f06aa4aa3f6d28f5bf3dbca7419457a34999e"
     },
     {
       "path": "models/user_get_by_id_output.dart",
-      "contentSha256": "2136512b2af5b3bbd67fc60f6ea74a5592a566da67585bb0d10edb50f4c85788"
+      "contentSha256": "eac608677a9089b566b64bb347da4ff3028e1b2fce8a15b48e2a936f05427f40"
     },
     {
       "path": "models/user_get_by_id_output_receipt.dart",
-      "contentSha256": "fec47b4a0969fb6ecf97643cca55e3b05c31f2714d0f509f957c5b9cff57049c"
+      "contentSha256": "1e56d293a960d518561423cd590fa909bf2748d640b0ed9887db6ae8e0b4cf90"
     },
     {
       "path": "models/user_update_input.dart",
-      "contentSha256": "9916307bc6bcfdca138d8f197760f38ca00352680759905eda1c8ddca868242e"
+      "contentSha256": "36febeb8d962a304ddaa2996a90ecd4d918c6f2f7f1ab192cd3882a5d2b13c38"
     },
     {
       "path": "procedures/health.dart",
-      "contentSha256": "f4ef30a19140653b54d76b9e262bcb9b182655d36f7e03465ccf2187f402eb90"
+      "contentSha256": "48ffb02b145ceaa56769db6c608655b708afb0e1948467eef3386c0a2677e309"
     },
     {
       "path": "procedures/posts_list.dart",
-      "contentSha256": "4a6b207a81bce45862688828f2fd6486b4ddfe260533ac157df657e7f79288be"
+      "contentSha256": "6f095e53968124a7ab85e38c9b88da1a12d3e65c828f0561a6f2ff67f788a8ba"
     },
     {
       "path": "procedures/user_get_by_id.dart",
-      "contentSha256": "b057c8cf6724a0f617dd81f456e2422949552cd3e9c21e8f347c98a97d377a58"
+      "contentSha256": "0657090b43797de91a2ef3b600ac7a90ec05fe24f283f013eb1c11f7baf57883"
     },
     {
       "path": "procedures/user_me.dart",
-      "contentSha256": "f9d5fb708cb43f1d56b527d2f9c18143ea7e122303f6ffa47b7104e29d95fd49"
+      "contentSha256": "c5e3f874e9d201c169a115340cf1ef2f59f320a1cfe18f89755788a8ce522ee8"
     },
     {
       "path": "procedures/user_update.dart",
-      "contentSha256": "7415915062e5488a63f17a5f6ecb363c258a6823c3e25d44306c85bd506c818a"
+      "contentSha256": "51232a2e85cfeeaeee5673e0c4a4afe0b0fc58411947ad7af55a81fca40ecd59"
     },
     {
       "path": "routers/posts_router.dart",
-      "contentSha256": "4bbe92931752c886c429f73907ecc58027d50d3704d7d4031aa9acd08b1bb379"
+      "contentSha256": "5d035be145008ea7743e19eef2456ec8188dfded5cd685cc254c535cac2889e4"
     },
     {
       "path": "routers/user_router.dart",
-      "contentSha256": "ac80e7ac54e621f9db6425e0223afeefced623fd430b3ea7942f7e02acf0eeb8"
+      "contentSha256": "3df4d149d74167b8565d4f66422767ca3d48b79ed41dfa37293d15eb24feaded"
     }
   ],
   "diagnostics": [],

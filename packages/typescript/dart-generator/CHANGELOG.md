@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- Emits bindings stamped with generator version 0.1.4.
+- Synchronized v0.1.4 lockstep release with the tsconfig-independent extractor.
+
 ## 0.1.3
 
 - Emits bindings stamped with generator version 0.1.3.

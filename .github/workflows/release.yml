@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v*.*.*"
 
 permissions:
   contents: read
@@ -11,9 +11,10 @@ permissions:
 
 jobs:
   publish-npm:
+    name: Publish TypeScript packages to npm (OIDC)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -22,70 +23,78 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
           cache: pnpm
-          registry-url: 'https://registry.npmjs.org'
 
-      - name: Ensure latest npm CLI for OIDC Trusted Publishing
-        run: npm install -g npm@latest
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Setup Flutter & Dart SDK (required for E2E tests & audit)
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Install dependencies, build & audit
+      - name: TypeScript build & typecheck
         run: |
-          pnpm install --frozen-lockfile
-          (cd packages/dart/trpc_dart && dart pub get)
-          (cd packages/dart/trpc_flutter && flutter pub get)
           pnpm -r build
           pnpm -r typecheck
-          pnpm run audit:release
 
-      - name: Publish @rpc-dart/core
-        run: pnpm --filter @rpc-dart/core publish --access public --no-git-checks --provenance
+      - name: Pre-release audit
+        run: pnpm run audit:release
 
-      - name: Publish @rpc-dart/trpc-adapter
-        run: pnpm --filter @rpc-dart/trpc-adapter publish --access public --no-git-checks --provenance
-
-      - name: Publish @rpc-dart/dart-generator
-        run: pnpm --filter @rpc-dart/dart-generator publish --access public --no-git-checks --provenance
-
-      - name: Publish rpc-dart CLI
-        run: pnpm --filter rpc-dart publish --access public --no-git-checks --provenance
+      - name: Publish to npm with provenance (idempotent)
+        run: |
+          for pkg in "@rpc-dart/core" "@rpc-dart/trpc-adapter" "@rpc-dart/dart-generator" "rpc-dart"; do
+            ver=$(node -p "require('./packages/typescript/${pkg === 'rpc-dart' ? 'cli' : pkg.split('/')[1]}/package.json').version")
+            if npm view "${pkg}@${ver}" version >/dev/null 2>&1; then
+              echo "✓ ${pkg}@${ver} is already published on npm — skipping"
+            else
+              echo "Publishing ${pkg}@${ver}..."
+              pnpm --filter "${pkg}" publish --access public --no-git-checks --provenance
+            fi
+          done
 
   publish-pub:
+    name: Publish Dart packages to pub.dev (OIDC)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
+          cache: pnpm
 
-      - name: Setup Flutter SDK
+      - name: Setup Flutter & Dart
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Setup Dart OIDC credentials for pub.dev
-        uses: dart-lang/setup-dart@v1
-
-      - name: Prepare pubspec.yaml files for release
+      - name: Prepare Dart manifests for standalone publishing
         run: node scripts/prepare-publish.mjs
 
-      - name: Publish trpc_dart to pub.dev
-        working-directory: packages/dart/trpc_dart
-        run: dart pub publish --force
+      - name: Mint pub.dev OIDC token & publish (idempotent)
+        env:
+          PUB_HOSTED_URL: "https://pub.dev"
+        run: |
+          TOKEN_JSON=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://pub.dev")
+          OIDC_TOKEN=$(echo "$TOKEN_JSON" | jq -r .value)
+          dart pub token add https://pub.dev --env-var PUB_OIDC_TOKEN <<< "$OIDC_TOKEN" || true
+          export PUB_OIDC_TOKEN="$OIDC_TOKEN"
 
-      - name: Wait for pub.dev to index trpc_dart
-        run: sleep 25
+          VER=$(node -p "require('./packages/typescript/core/package.json').version")
 
-      - name: Publish trpc_flutter to pub.dev
-        working-directory: packages/dart/trpc_flutter
-        run: flutter pub publish --force
+          if curl -fsSL "https://pub.dev/api/packages/trpc_dart/versions/${VER}" >/dev/null 2>&1; then
+            echo "✓ trpc_dart@${VER} is already published on pub.dev — skipping"
+          else
+            (cd packages/dart/trpc_dart && dart pub get && dart pub publish --force)
+            sleep 25
+          fi
+
+          if curl -fsSL "https://pub.dev/api/packages/trpc_flutter/versions/${VER}" >/dev/null 2>&1; then
+            echo "✓ trpc_flutter@${VER} is already published on pub.dev — skipping"
+          else
+            (cd packages/dart/trpc_flutter && flutter pub get && dart pub publish --force)
+          fi

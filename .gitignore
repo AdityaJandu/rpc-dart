@@ -1,0 +1,9 @@
+node_modules/
+dist/
+**/build/
+**/.dart_tool/
+**/coverage/
+packages/dart/*/pubspec.lock
+tests/e2e/.tmp/
+*.log
+.DS_Store

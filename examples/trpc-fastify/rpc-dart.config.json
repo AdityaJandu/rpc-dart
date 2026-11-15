@@ -1,0 +1,13 @@
+{
+  "tsconfig": "tsconfig.json",
+  "entry": "src/server.ts",
+  "exportName": "appRouter",
+  "transformer": "superjson",
+  "dart": {
+    "outDir": "../flutter-app/lib/src/api",
+    "packagePath": "../flutter-app"
+  },
+  "policies": {
+    "unserializablePolicy": "error"
+  }
+}

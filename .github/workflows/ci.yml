@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Flutter & Dart SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Dart & Flutter dependencies
+        run: |
+          (cd packages/dart/trpc_dart && dart pub get)
+          (cd packages/dart/trpc_flutter && flutter pub get)
+          (cd examples/flutter-app && flutter pub get)
+
+      - name: TypeScript typecheck & build
+        run: |
+          pnpm -r typecheck
+          pnpm -r build
+
+      - name: TypeScript & E2E test suites
+        run: pnpm -r test
+
+      - name: Dart & Flutter strict analysis
+        run: |
+          (cd packages/dart/trpc_dart && dart analyze --fatal-infos --fatal-warnings)
+          (cd packages/dart/trpc_flutter && flutter analyze --fatal-infos --fatal-warnings)
+          (cd examples/flutter-app && flutter analyze --fatal-infos --fatal-warnings)
+
+      - name: Dart & Flutter test suites
+        run: |
+          (cd packages/dart/trpc_dart && dart test)
+          (cd packages/dart/trpc_flutter && flutter test)
+          (cd examples/flutter-app && flutter test)
+
+      - name: Pre-release audit gate
+        run: pnpm run audit:release

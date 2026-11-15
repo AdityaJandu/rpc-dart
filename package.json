@@ -1,0 +1,19 @@
+{
+  "name": "rpc-dart-monorepo",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:e2e": "pnpm --filter @rpc-dart/e2e test",
+    "test:dart": "cd packages/dart/trpc_dart && dart test && cd ../trpc_flutter && flutter test",
+    "audit:release": "node scripts/audit-release.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "license": "MIT",
+  "description": "End-to-end type safety for tRPC v11 backends consumed from Dart and Flutter."
+}

@@ -1,0 +1,83 @@
+{
+  "irHash": "sha256-41728e69d7d1efe9436d9ec96f5d00104c44f93b213bc6e0fb3b117428446a13",
+  "generatorVersion": "0.1.0",
+  "protocol": {
+    "kind": "trpc",
+    "version": "11",
+    "transformer": "superjson"
+  },
+  "files": [
+    {
+      "path": "api.dart",
+      "contentSha256": "bf8b10179613cb8d6e02ed472541ee153c2576f07172264399000dd0f7dcbd72"
+    },
+    {
+      "path": "models/health_output.dart",
+      "contentSha256": "782d0cdd1cd11be07d3b1379121ef684f16d34e4173ec238fd2eb83fa74c1873"
+    },
+    {
+      "path": "models/posts_list_input.dart",
+      "contentSha256": "ec0663f41e80407a99e369fe854234b4c35a91f56c8baf0f49744555fbaa1b1b"
+    },
+    {
+      "path": "models/posts_list_input_sort.dart",
+      "contentSha256": "35218c66d7792f9b901fcf28bfe7a1154a50b53da17fd4aeff030efcd44b13ff"
+    },
+    {
+      "path": "models/posts_list_output.dart",
+      "contentSha256": "7aece99fa3753120b5a74c02f94c60303e1d270c7f7bfc602cda270475131a8e"
+    },
+    {
+      "path": "models/posts_list_output_items_item.dart",
+      "contentSha256": "33733314fbd43d9c29dadc6f32255a2de2ad659a87fbe82397675dddd5f12fef"
+    },
+    {
+      "path": "models/user_get_by_id_input.dart",
+      "contentSha256": "470023fff51e5ac7cd3e6d5a7108d8e1c697d3df9072a17c6084a275ed23e34b"
+    },
+    {
+      "path": "models/user_get_by_id_output.dart",
+      "contentSha256": "218ab8c95600136b9582b959c7765141906b595ac3001c7c6d51df6aca375a07"
+    },
+    {
+      "path": "models/user_get_by_id_output_receipt.dart",
+      "contentSha256": "744ff779d9741eb4aa522ae0d0ab26f19d0422784e91ff10f4adc0b777880c96"
+    },
+    {
+      "path": "models/user_update_input.dart",
+      "contentSha256": "b4e83951e27b4a7beefe3bcb481e9552ae8e72499812040c653c8e83e94cb755"
+    },
+    {
+      "path": "procedures/health.dart",
+      "contentSha256": "994f85bced56e04f5dd07f6f5865478860252e7af3e1b03ee4baefce98046e46"
+    },
+    {
+      "path": "procedures/posts_list.dart",
+      "contentSha256": "8f800dd7782f3efec5115fd17b623cd22b9dfc7cd41f3a1b6040142c03efaecf"
+    },
+    {
+      "path": "procedures/user_get_by_id.dart",
+      "contentSha256": "4c4e8b47bbbeedbf1ce474733a6dd57d612f710c5aa118dfe1964c418641c336"
+    },
+    {
+      "path": "procedures/user_me.dart",
+      "contentSha256": "d4fd4a1331c93d53c75d5bac465a35224017134145562bb320afacde16302b3d"
+    },
+    {
+      "path": "procedures/user_update.dart",
+      "contentSha256": "71abc64cea020023ffe5d5edaf527e4ccdf5429e17a840f4c7ced49034a771d1"
+    },
+    {
+      "path": "routers/posts_router.dart",
+      "contentSha256": "6c20c5b46c40c2f74003a0937e9286288240099f322e75bf39dab204896458ec"
+    },
+    {
+      "path": "routers/user_router.dart",
+      "contentSha256": "9bad4435e78679e394cf4c680ac3cc69cf431be21037b5dc135db308ec753832"
+    }
+  ],
+  "diagnostics": [],
+  "policies": {
+    "unserializablePolicy": "error"
+  }
+}

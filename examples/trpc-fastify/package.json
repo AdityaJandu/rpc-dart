@@ -1,0 +1,17 @@
+{
+  "name": "@rpc-dart/example-trpc-fastify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-strip-types src/server.ts",
+    "child": "node scripts/server-child.mjs"
+  },
+  "dependencies": {
+    "@trpc/server": "^11.28.0",
+    "fastify": "^5.0.0",
+    "jiti": "^2.6.0",
+    "superjson": "^2.2.3",
+    "zod": "^3.25.76"
+  }
+}

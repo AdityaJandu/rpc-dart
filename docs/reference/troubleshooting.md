@@ -53,6 +53,6 @@ That is normal: per-item error envelopes are demultiplexed — failed items comp
 
 ## Still stuck
 
-Search the [issue tracker](https://github.com/rpc-dart/rpc-dart/issues) or open a new one with the diagnostic output and a minimal router fixture.
+Search the [issue tracker](https://github.com/AdityaJandu/rpc-dart/issues) or open a new one with the diagnostic output and a minimal router fixture.
 
 ← Previous: Dart runtime API | Documentation Home →

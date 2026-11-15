@@ -2,7 +2,7 @@
 
 Pure Dart runtime for tRPC v11 clients - links, batching, SuperJSON, typed errors, and a state-agnostic query cache.
 
-Part of the [rpc-dart](https://github.com/rpc-dart/rpc-dart) monorepo — end-to-end type safety for tRPC v11 backends consumed from Dart and Flutter.
+Part of the [rpc-dart](https://github.com/AdityaJandu/rpc-dart) monorepo — end-to-end type safety for tRPC v11 backends consumed from Dart and Flutter.
 
 ## Install
 

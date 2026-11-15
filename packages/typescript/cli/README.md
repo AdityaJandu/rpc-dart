@@ -2,7 +2,7 @@
 
 Zero-config CLI that generates typed Dart bindings from tRPC v11 routers.
 
-Part of the [rpc-dart](https://github.com/rpc-dart/rpc-dart) monorepo — end-to-end type safety for tRPC v11 backends consumed from Dart and Flutter.
+Part of the [rpc-dart](https://github.com/AdityaJandu/rpc-dart) monorepo — end-to-end type safety for tRPC v11 backends consumed from Dart and Flutter.
 
 ## Install
 

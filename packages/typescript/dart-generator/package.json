@@ -24,9 +24,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rpc-dart/rpc-dart.git"
+    "url": "git+https://github.com/AdityaJandu/rpc-dart.git"
   },
-  "homepage": "https://github.com/rpc-dart/rpc-dart#readme",
+  "homepage": "https://github.com/AdityaJandu/rpc-dart#readme",
   "keywords": [
     "dart",
     "code-generation",

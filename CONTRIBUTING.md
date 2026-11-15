@@ -5,7 +5,7 @@ Thanks for helping build rpc-dart! This guide covers setup, the development work
 ## Setup
 
 ```bash
-git clone https://github.com/rpc-dart/rpc-dart.git
+git clone https://github.com/AdityaJandu/rpc-dart.git
 cd rpc-dart
 pnpm install                 # TypeScript workspace
 cd packages/dart/trpc_dart && dart pub get && cd -

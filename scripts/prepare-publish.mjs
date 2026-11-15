@@ -11,7 +11,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const VERSION = '0.1.3';
+// Release version derived from the lockstep source of truth (core package.json)
+// so version bumps don't require editing this script.
+const VERSION = JSON.parse(
+  readFileSync(path.join(ROOT, 'packages/typescript/core/package.json'), 'utf-8'),
+).version;
 const PACKAGES = ['trpc_dart', 'trpc_flutter'];
 const restore = process.argv.includes('--restore');
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Synchronized v0.1.4 lockstep release; `trpc_dart` constraint raised to `^0.1.4`.
+
 ## 0.1.3
 
 - Comprehensive package documentation and runnable ValueListenable examples for pub.dev.

@@ -141,7 +141,7 @@ In your Flutter or Dart project, add [`trpc_dart`](https://pub.dev/packages/trpc
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.1.3
+  trpc_dart: ^0.1.4
 ```
 
 Initialize the client with the generated `Api` class:

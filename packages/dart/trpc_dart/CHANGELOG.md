@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Synchronized v0.1.4 lockstep release; no runtime changes.
+
 ## 0.1.3
 
 - Comprehensive package documentation and runnable standalone examples for pub.dev.

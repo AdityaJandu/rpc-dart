@@ -35,7 +35,8 @@ RpcClient clientWith(
   return RpcClient(
     endpoint: Uri.parse('http://localhost/trpc'),
     links: [
-      RetryLink(policy: policy, sleep: (delay) async => transport.delays.add(delay)),
+      RetryLink(
+          policy: policy, sleep: (delay) async => transport.delays.add(delay)),
       transport,
     ],
   );
@@ -43,14 +44,16 @@ RpcClient clientWith(
 
 void main() {
   group('RetryLink: queries', () {
-    test('retries network failures with exponential backoff then succeeds', () async {
+    test('retries network failures with exponential backoff then succeeds',
+        () async {
       final transport = ScriptedTransport(
         failure: RpcNetworkException('socket dropped'),
         failTimes: 2,
       );
       final client = clientWith(
         transport,
-        policy: const RpcRetryPolicy(maxAttempts: 3, backoff: Duration(milliseconds: 100)),
+        policy: const RpcRetryPolicy(
+            maxAttempts: 3, backoff: Duration(milliseconds: 100)),
       );
 
       final result = await client.execute(const RpcRequest(
@@ -76,7 +79,8 @@ void main() {
       };
       for (final entry in cases.entries) {
         final transport = ScriptedTransport(failure: entry.value, failTimes: 1);
-        final client = clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 2));
+        final client =
+            clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 2));
         final result = await client.execute(RpcRequest(
           path: entry.key,
           kind: RpcProcedureKind.query,
@@ -92,7 +96,8 @@ void main() {
         failure: RpcNetworkException('socket dropped'),
         failTimes: 99,
       );
-      final client = clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 3));
+      final client =
+          clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 3));
 
       await expectLater(
         client.execute(const RpcRequest(
@@ -110,7 +115,8 @@ void main() {
         failure: RpcBadRequestException('nope'),
         failTimes: 99,
       );
-      final client = clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 3));
+      final client =
+          clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 3));
 
       await expectLater(
         client.execute(const RpcRequest(
@@ -125,7 +131,8 @@ void main() {
     });
 
     test('honors a custom retryable predicate', () async {
-      final transport = ScriptedTransport(failure: RpcNotFoundException('gone'), failTimes: 1);
+      final transport = ScriptedTransport(
+          failure: RpcNotFoundException('gone'), failTimes: 1);
       final client = RpcClient(
         endpoint: Uri.parse('http://localhost/trpc'),
         links: [
@@ -155,7 +162,8 @@ void main() {
         failure: RpcNetworkException('socket dropped'),
         failTimes: 2,
       );
-      final client = clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 3));
+      final client =
+          clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 3));
 
       await expectLater(
         client.execute(const RpcRequest(
@@ -174,7 +182,8 @@ void main() {
         failure: RpcNetworkException('socket dropped'),
         failTimes: 1,
       );
-      final client = clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 3));
+      final client =
+          clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 3));
 
       final result = await client.execute(const RpcRequest(
         path: 'user.update',
@@ -191,7 +200,8 @@ void main() {
         failure: RpcNetworkException('socket dropped'),
         failTimes: 1,
       );
-      final client = clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 2));
+      final client =
+          clientWith(transport, policy: const RpcRetryPolicy(maxAttempts: 2));
 
       final result = await client.execute(const RpcRequest(
         path: 'user.update',
@@ -227,7 +237,8 @@ void main() {
           .toList();
       expect(ids.length, 2);
       expect(ids.first, isNotNull);
-      expect(ids.toSet().length, 1, reason: 'one logical operation, one correlation id');
+      expect(ids.toSet().length, 1,
+          reason: 'one logical operation, one correlation id');
     });
   });
 }

@@ -43,7 +43,9 @@ void main() {
       expect(transport.single.header('authorization'), 'Bearer t1');
     });
 
-    test('single-flight: 10 concurrent 401s refresh exactly once, all replay once', () async {
+    test(
+        'single-flight: 10 concurrent 401s refresh exactly once, all replay once',
+        () async {
       var refreshCalls = 0;
       var token = 't1';
       final transport = FakeTransport((request, _) async {
@@ -69,24 +71,35 @@ void main() {
       );
 
       final results = await Future.wait<Object?>(
-        List.generate(10, (_) => client.execute(const RpcRequest(
-              path: 'user.me',
-              kind: RpcProcedureKind.query,
-              input: null,
-            ))),
+        List.generate(
+            10,
+            (_) => client.execute(const RpcRequest(
+                  path: 'user.me',
+                  kind: RpcProcedureKind.query,
+                  input: null,
+                ))),
       );
 
       expect(refreshCalls, 1, reason: 'single-flight refresh lock');
       expect(results.every((r) => r == 'ok-Bearer t2'), isTrue);
       // Every operation replayed at most once: 10 initial + 10 replays.
       expect(transport.requests.length, 20);
-      expect(transport.requests.where((r) => r.header('authorization') == 'Bearer t1').length, 10);
-      expect(transport.requests.where((r) => r.header('authorization') == 'Bearer t2').length, 10);
+      expect(
+          transport.requests
+              .where((r) => r.header('authorization') == 'Bearer t1')
+              .length,
+          10);
+      expect(
+          transport.requests
+              .where((r) => r.header('authorization') == 'Bearer t2')
+              .length,
+          10);
     });
 
     test('a second 401 after replay surfaces (no infinite loop)', () async {
       var refreshCalls = 0;
-      final transport = FakeTransport((request, _) async => throw _unauthorized);
+      final transport =
+          FakeTransport((request, _) async => throw _unauthorized);
       final client = RpcClient(
         endpoint: Uri.parse('http://localhost/trpc'),
         links: [
@@ -115,13 +128,15 @@ void main() {
     });
 
     test('refresh failure surfaces the original unauthorized error', () async {
-      final transport = FakeTransport((request, _) async => throw _unauthorized);
+      final transport =
+          FakeTransport((request, _) async => throw _unauthorized);
       final client = RpcClient(
         endpoint: Uri.parse('http://localhost/trpc'),
         links: [
           AuthLink(
             getHeaders: () async => {'authorization': 'Bearer t1'},
-            onUnauthorized: () async => throw StateError('refresh endpoint down'),
+            onUnauthorized: () async =>
+                throw StateError('refresh endpoint down'),
           ),
           transport,
         ],
@@ -135,10 +150,12 @@ void main() {
         )),
         throwsA(isA<RpcUnauthorizedException>()),
       );
-      expect(transport.requests.length, 1, reason: 'no replay without fresh credentials');
+      expect(transport.requests.length, 1,
+          reason: 'no replay without fresh credentials');
     });
 
-    test('overrideExisting replaces per-call headers only when configured', () async {
+    test('overrideExisting replaces per-call headers only when configured',
+        () async {
       final transport = FakeTransport((request, _) async => 'ok');
       Future<Object?> run({required bool overrideExisting}) {
         final client = RpcClient(
@@ -155,7 +172,8 @@ void main() {
           path: 'user.me',
           kind: RpcProcedureKind.query,
           input: null,
-          context: RpcCallContext(headers: {'authorization': 'Bearer per-call'}),
+          context:
+              RpcCallContext(headers: {'authorization': 'Bearer per-call'}),
         ));
       }
 

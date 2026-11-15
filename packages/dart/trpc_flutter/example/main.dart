@@ -26,8 +26,16 @@ Future<void> main() async {
   );
 
   runApp(
-    WidgetsApp(color: const Color(0xFF000000), pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) => PageRouteBuilder<T>(settings: settings, pageBuilder: (BuildContext context, Animation<double> _, Animation<double> __) => builder(context)), 
-      home: Center(child: ValueListenableBuilder<RpcAsyncState<FakeUser>>(
+    WidgetsApp(
+      color: const Color(0xFF000000),
+      pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
+          PageRouteBuilder<T>(
+              settings: settings,
+              pageBuilder: (BuildContext context, Animation<double> _,
+                      Animation<double> __) =>
+                  builder(context)),
+      home: Center(
+        child: ValueListenableBuilder<RpcAsyncState<FakeUser>>(
           valueListenable: ref.listenable,
           builder: (context, state, _) => switch (state) {
             RpcAsyncLoading() => const Text('Loading...'),

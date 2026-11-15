@@ -16,10 +16,12 @@ class FakeInput {
 }
 
 void main() {
-  testWidgets('listenable reflects cache states and invalidation refetches', (tester) async {
+  testWidgets('listenable reflects cache states and invalidation refetches',
+      (tester) async {
     final cache = RpcQueryCache();
     var fetches = 0;
-    final key = const RpcQueryKey(path: ['user', 'getById'], input: FakeInput('u1'));
+    final key =
+        const RpcQueryKey(path: ['user', 'getById'], input: FakeInput('u1'));
     final ref = cache.watch<FakeInput>(key, () async {
       fetches++;
       return FakeInput('u$fetches');
@@ -39,12 +41,16 @@ void main() {
 
     cache.invalidate(const RpcQueryKey(path: ['user']));
     await tester.pumpAndSettle();
-    final dataStates =
-        states.whereType<RpcAsyncData<FakeInput>>().map((s) => s.data.id).toList();
-    expect(dataStates, contains('u2'), reason: 'invalidate refetched through the cache');
+    final dataStates = states
+        .whereType<RpcAsyncData<FakeInput>>()
+        .map((s) => s.data.id)
+        .toList();
+    expect(dataStates, contains('u2'),
+        reason: 'invalidate refetched through the cache');
   });
 
-  testWidgets('ValueListenableBuilder renders loading then data', (tester) async {
+  testWidgets('ValueListenableBuilder renders loading then data',
+      (tester) async {
     final cache = RpcQueryCache();
     final ref = cache.watch<String>(
       const RpcQueryKey(path: ['slow']),
@@ -56,14 +62,23 @@ void main() {
 
     final widget = ValueListenableBuilder<RpcAsyncState<String>>(
       valueListenable: ref.listenable,
-      builder: (BuildContext context, RpcAsyncState<String> state, Widget? _) => switch (state) {
+      builder: (BuildContext context, RpcAsyncState<String> state, Widget? _) =>
+          switch (state) {
         RpcAsyncLoading<String>() => const Text('loading'),
         RpcAsyncError<String>() => const Text('error'),
         RpcAsyncData<String>(:final data) => Text(data),
       },
     );
 
-    await tester.pumpWidget(WidgetsApp(color: const Color(0xFF000000), pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) => PageRouteBuilder<T>(settings: settings, pageBuilder: (BuildContext context, Animation<double> _, Animation<double> __) => builder(context)), home: widget));
+    await tester.pumpWidget(WidgetsApp(
+        color: const Color(0xFF000000),
+        pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
+            PageRouteBuilder<T>(
+                settings: settings,
+                pageBuilder: (BuildContext context, Animation<double> _,
+                        Animation<double> __) =>
+                    builder(context)),
+        home: widget));
     expect(find.text('loading'), findsOneWidget);
 
     await tester.pumpAndSettle();

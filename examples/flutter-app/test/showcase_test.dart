@@ -17,9 +17,11 @@ void main() {
   late Api api;
 
   setUpAll(() async {
-    final script = Directory.current.uri.resolve('../trpc-fastify/scripts/server-child.mjs');
+    final script = Directory.current.uri
+        .resolve('../trpc-fastify/scripts/server-child.mjs');
     server = await Process.start('node', [script.toFilePath()],
-        workingDirectory: Directory.current.uri.resolve('../trpc-fastify').toFilePath());
+        workingDirectory:
+            Directory.current.uri.resolve('../trpc-fastify').toFilePath());
     final ready = Completer<int>();
     server.stdout
         .transform(const SystemEncoding().decoder)
@@ -76,7 +78,8 @@ void main() {
   });
 
   test('cursor pagination across pages', () async {
-    final page1 = await api.posts.list.query(const PostsListInput(sort: PostsListInputSort.asc));
+    final page1 = await api.posts.list
+        .query(const PostsListInput(sort: PostsListInputSort.asc));
     expect(page1.items, hasLength(2));
     expect(page1.nextCursor, isNotNull);
 
@@ -92,13 +95,17 @@ void main() {
       RpcClient(
         endpoint: Uri.parse('http://127.0.0.1:$port/trpc'),
         transformer: RpcTransformer.superjson,
-        links: [HttpBatchLink(endpoint: Uri.parse('http://127.0.0.1:$port/trpc'))],
+        links: [
+          HttpBatchLink(endpoint: Uri.parse('http://127.0.0.1:$port/trpc'))
+        ],
       ),
     );
-    await expectLater(anonymous.user.me.query(), throwsA(isA<RpcUnauthorizedException>()));
+    await expectLater(
+        anonymous.user.me.query(), throwsA(isA<RpcUnauthorizedException>()));
   });
 
-  test('showcase listenable bridge renders live states over the wire', () async {
+  test('showcase listenable bridge renders live states over the wire',
+      () async {
     // The showcase composition root (main.dart) wires the same links; here we
     // verify the reactive contract: the listenable mirrors cache states and
     // the widget tree consumes it through ValueListenableBuilder.
@@ -107,12 +114,13 @@ void main() {
     final states = <RpcAsyncState<UserGetByIdOutput>>[];
     listenable.addListener(() => states.add(listenable.value));
 
-    final first =
-        await ref.stream.firstWhere((s) => s is RpcAsyncData<UserGetByIdOutput>);
+    final first = await ref.stream
+        .firstWhere((s) => s is RpcAsyncData<UserGetByIdOutput>);
     expect(
       (first as RpcAsyncData<UserGetByIdOutput>).data.name,
       'Aditya',
     );
-    expect(states.whereType<RpcAsyncData<UserGetByIdOutput>>().last.data.name, 'Aditya');
+    expect(states.whereType<RpcAsyncData<UserGetByIdOutput>>().last.data.name,
+        'Aditya');
   });
 }

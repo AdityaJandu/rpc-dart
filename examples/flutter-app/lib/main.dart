@@ -10,7 +10,9 @@ final client = RpcClient(
   transformer: RpcTransformer.superjson,
   defaultHeaders: const {'x-app': 'showcase'},
   links: [
-    LoggingLink(onEvent: (event) => debugPrint('[rpc] ${event.event} ${event.path} ${event.durationMs}ms')),
+    LoggingLink(
+        onEvent: (event) => debugPrint(
+            '[rpc] ${event.event} ${event.path} ${event.durationMs}ms')),
     AuthLink(
       getHeaders: () async => {'authorization': 'Bearer demo-token'},
       onUnauthorized: () async {
@@ -40,8 +42,9 @@ class ShowcaseApp extends StatelessWidget {
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
           PageRouteBuilder<T>(
         settings: settings,
-        pageBuilder: (BuildContext context, Animation<double> _, Animation<double> __) =>
-            builder(context),
+        pageBuilder:
+            (BuildContext context, Animation<double> _, Animation<double> __) =>
+                builder(context),
       ),
       home: SafeArea(
         child: ListView(
@@ -69,9 +72,11 @@ class ShowcaseApp extends StatelessWidget {
                 debugPrint('page1: ${page.items.map((p) => p.id).join(',')}');
                 if (page.nextCursor != null) {
                   final page2 = await api.posts.list.query(
-                    PostsListInput(sort: PostsListInputSort.asc, cursor: page.nextCursor),
+                    PostsListInput(
+                        sort: PostsListInputSort.asc, cursor: page.nextCursor),
                   );
-                  debugPrint('page2: ${page2.items.map((p) => p.id).join(',')}');
+                  debugPrint(
+                      'page2: ${page2.items.map((p) => p.id).join(',')}');
                 }
               },
               child: const Padding(

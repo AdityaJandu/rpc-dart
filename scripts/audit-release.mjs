@@ -43,7 +43,7 @@ check('version-lockstep', () => {
   if (all.some((v) => v !== all[0])) {
     throw new Error(`versions differ: npm [${npm.join(', ')}] dart [${dart.join(', ')}]`);
   }
-  if (all[0] !== '0.1.2') throw new Error(`expected 0.1.2, got ${all[0]}`);
+  if (all[0] !== '0.1.3') throw new Error(`expected 0.1.3, got ${all[0]}`);
   return `all 6 packages at ${all[0]}`;
 });
 
@@ -131,7 +131,7 @@ check('markdown-links', () => {
   return 'all relative links resolve';
 });
 
-// 5.5. .pubignore existence + no build/ directories under packages/dart/.
+// 5.5. .pubignore existence + pubspec_overrides architecture + no build/ directories.
 check('dart-packaging', () => {
   for (const pkg of ['trpc_dart', 'trpc_flutter']) {
     const pubignore = path.join(ROOT, 'packages/dart', pkg, '.pubignore');
@@ -140,9 +140,43 @@ check('dart-packaging', () => {
     if (!content.includes('build/')) throw new Error(`${pkg}/.pubignore missing build/ exclusion`);
     if (!content.includes('.dart_tool/')) throw new Error(`${pkg}/.pubignore missing .dart_tool/ exclusion`);
   }
+
+  const flutterPubignore = readFileSync(path.join(ROOT, 'packages/dart/trpc_flutter/.pubignore'), 'utf-8');
+  if (!flutterPubignore.includes('pubspec_overrides.yaml')) {
+    throw new Error('trpc_flutter/.pubignore missing pubspec_overrides.yaml exclusion');
+  }
+
+  const flutterOverrides = path.join(ROOT, 'packages/dart/trpc_flutter/pubspec_overrides.yaml');
+  if (!existsSync(flutterOverrides)) {
+    throw new Error('missing packages/dart/trpc_flutter/pubspec_overrides.yaml');
+  }
+
+  const flutterPubspec = readFileSync(path.join(ROOT, 'packages/dart/trpc_flutter/pubspec.yaml'), 'utf-8');
+  if (!/trpc_dart:\s*\^0\.1\.3/.test(flutterPubspec)) {
+    throw new Error('trpc_flutter/pubspec.yaml must declare hosted constraint trpc_dart: ^0.1.3');
+  }
+  if (/publish_to:\s*none/.test(flutterPubspec)) {
+    throw new Error('trpc_flutter/pubspec.yaml must not contain publish_to: none');
+  }
+
+  const dartPubspec = readFileSync(path.join(ROOT, 'packages/dart/trpc_dart/pubspec.yaml'), 'utf-8');
+  if (/publish_to:\s*none/.test(dartPubspec)) {
+    throw new Error('trpc_dart/pubspec.yaml must not contain publish_to: none');
+  }
+
   const buildDirs = walk(path.join(ROOT, 'packages/dart'), (f) => path.basename(f) === 'build' && statSync(f).isDirectory());
   if (buildDirs.length > 0) throw new Error(`build/ directories found:\n${buildDirs.join('\n')}`);
-  return '.pubignore present in both packages; no build/ directories';
+
+  // Validate prepare-publish and restore is a pure round-trip
+  const beforeStatus = execSync('git status --porcelain packages/dart', { cwd: ROOT, encoding: 'utf-8' });
+  execSync('node scripts/prepare-publish.mjs', { cwd: ROOT, stdio: 'pipe' });
+  execSync('node scripts/prepare-publish.mjs --restore', { cwd: ROOT, stdio: 'pipe' });
+  const afterStatus = execSync('git status --porcelain packages/dart', { cwd: ROOT, encoding: 'utf-8' });
+  if (beforeStatus !== afterStatus) {
+    throw new Error(`prepare-publish + restore altered git state in packages/dart:\nBefore:\n${beforeStatus}\nAfter:\n${afterStatus}`);
+  }
+
+  return 'pubspec_overrides architecture verified; clean prepare/restore cycle; no build/ directories';
 });
 
 // 6. Publish readiness + zero-flag check against the example config.

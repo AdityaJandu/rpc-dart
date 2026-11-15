@@ -1,17 +1,60 @@
 # @rpc-dart/core
 
-Contract IR types, canonical serialization, and structured diagnostics for rpc-dart.
+[![npm version](https://img.shields.io/npm/v/@rpc-dart/core.svg)](https://www.npmjs.com/package/@rpc-dart/core)
+[![license](https://img.shields.io/npm/l/@rpc-dart/core.svg)](https://github.com/AdityaJandu/rpc-dart/blob/main/LICENSE)
 
-Part of the [rpc-dart](https://github.com/AdityaJandu/rpc-dart) monorepo — end-to-end type safety for tRPC v11 backends consumed from Dart and Flutter.
+Core Contract Intermediate Representation (IR), canonical serialization, and compiler diagnostics for `rpc-dart`.
 
-## Install
+Part of the [rpc-dart](https://github.com/AdityaJandu/rpc-dart) monorepo.
+
+---
+
+## Role
+
+`@rpc-dart/core` decouples backend schema extraction from target code generation:
+
+1. **Contract IR schemas:** Strongly-typed definitions for routers, procedures (queries, mutations, subscriptions), models, fields, enums, discriminated unions, and primitive types.
+2. **Canonical serialization:** Deterministic JSON serialization with key sorting, so identical contracts produce identical output independent of property insertion order.
+3. **Semantic IR hashing:** `computeIrHash` calculates a SHA-256 hash over semantic structure, skipping generator metadata and comments, powering change detection in watch mode and CI audits.
+4. **Structured diagnostics:** Diagnostic error and warning models (`Diagnostic`, `DiagnosticCode`) carrying procedure paths, line numbers, and actionable remediation tips.
+
+---
+
+## Installation
 
 ```bash
 npm install @rpc-dart/core
+# or
+pnpm add @rpc-dart/core
 ```
 
-See the [documentation](../../docs/README.md) for the full CLI reference, concepts, and guides.
+---
+
+## Primary Exports
+
+```typescript
+import {
+  type ContractIr,
+  type ProcedureIr,
+  type ModelIr,
+  type TypeDesc,
+  canonicalJsonStringify,
+  computeIrHash,
+  type Diagnostic,
+  DiagnosticCode,
+} from '@rpc-dart/core';
+```
+
+---
+
+## Links
+
+- [GitHub Repository](https://github.com/AdityaJandu/rpc-dart)
+- [CLI Package (rpc-dart)](https://www.npmjs.com/package/rpc-dart)
+- [Issue Tracker](https://github.com/AdityaJandu/rpc-dart/issues)
+
+---
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT © [Aditya Jandu](https://github.com/AdityaJandu)

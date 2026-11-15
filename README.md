@@ -57,8 +57,8 @@ export { appRouter };
 
 ```yaml
 dependencies:
-  trpc_dart: ^1.0.0          # pure Dart runtime (works on server, CLI, web, VM)
-  trpc_flutter: ^1.0.0       # optional: ValueListenable bridge for Flutter UIs
+  trpc_dart: ^0.1.3          # pure Dart runtime (works on server, CLI, web, VM)
+  trpc_flutter: ^0.1.3       # optional: ValueListenable bridge for Flutter UIs
 ```
 
 ```dart

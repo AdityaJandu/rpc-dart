@@ -42,12 +42,14 @@ Object? applyMeta(Object? value, Object? annotation) {
 /// Expands flat dotted-path keys ("items.0.when") into a nested tree.
 Map<String, Object?> normalizeAnnotationTree(Map<String, Object?> flat) {
   final out = <String, Object?>{};
-  void place(List<String> segments, Object? annotation, Map<String, Object?> node) {
+  void place(
+      List<String> segments, Object? annotation, Map<String, Object?> node) {
     if (segments.isEmpty) return;
     final head = segments.first;
     if (segments.length == 1) {
       final existing = node[head];
-      if (existing is Map<String, Object?> && annotation is Map<String, Object?>) {
+      if (existing is Map<String, Object?> &&
+          annotation is Map<String, Object?>) {
         for (final entry in annotation.entries) {
           place([entry.key], entry.value, existing);
         }
@@ -106,11 +108,17 @@ Object? applyAnnotation(Object? value, String kind) {
   switch (kind) {
     case 'Date':
       if (value case final String v) return DateTime.parse(v);
-      throw RpcDecodeException('superjson Date annotation without a string value', expected: 'String', actual: value.runtimeType.toString());
+      throw RpcDecodeException(
+          'superjson Date annotation without a string value',
+          expected: 'String',
+          actual: value.runtimeType.toString());
     case 'bigint':
       if (value case final String v) return BigInt.parse(v);
       if (value case final int v) return BigInt.from(v);
-      throw RpcDecodeException('superjson bigint annotation without a numeric value', expected: 'BigInt', actual: value.runtimeType.toString());
+      throw RpcDecodeException(
+          'superjson bigint annotation without a numeric value',
+          expected: 'BigInt',
+          actual: value.runtimeType.toString());
     case 'number':
       switch (value) {
         case 'NaN':
@@ -122,19 +130,28 @@ Object? applyAnnotation(Object? value, String kind) {
         case final num v:
           return v.toDouble();
         default:
-          throw RpcDecodeException('superjson number annotation without a numeric value', expected: 'num', actual: value.runtimeType.toString());
+          throw RpcDecodeException(
+              'superjson number annotation without a numeric value',
+              expected: 'num',
+              actual: value.runtimeType.toString());
       }
     case 'negativeZero':
       return -0.0;
     case 'set':
       if (value case final List<Object?> l) return l.toSet();
-      throw RpcDecodeException('superjson set annotation without an array value', expected: 'List', actual: value.runtimeType.toString());
+      throw RpcDecodeException(
+          'superjson set annotation without an array value',
+          expected: 'List',
+          actual: value.runtimeType.toString());
     case 'map':
     case 'regexp':
       return value;
     case 'URL':
       if (value case final String v) return Uri.parse(v);
-      throw RpcDecodeException('superjson URL annotation without a string value', expected: 'String', actual: value.runtimeType.toString());
+      throw RpcDecodeException(
+          'superjson URL annotation without a string value',
+          expected: 'String',
+          actual: value.runtimeType.toString());
     case 'undefined':
       return null;
     default:

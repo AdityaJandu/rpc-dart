@@ -64,7 +64,8 @@ void main() {
       expect(events[1].durationMs, greaterThanOrEqualTo(0));
     });
 
-    test('redacts secret headers case-insensitively plus custom names', () async {
+    test('redacts secret headers case-insensitively plus custom names',
+        () async {
       final logged = <RpcLogEvent>[];
       final client = RpcClient(
         endpoint: Uri.parse('http://localhost/trpc'),

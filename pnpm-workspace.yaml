@@ -1,6 +1,8 @@
 packages:
   - "packages/typescript/*"
   - "examples/*"
+  - "tests/*"
+  - "tests/fixtures/*"
 
 allowBuilds:
   esbuild: true

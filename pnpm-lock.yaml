@@ -266,6 +266,34 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@24.19.2)(jiti@2.7.0)
 
+  tests/e2e:
+    dependencies:
+      '@trpc/server':
+        specifier: ^11.28.0
+        version: 11.28.0(fastify@5.12.8)(typescript@5.9.3)
+      fastify:
+        specifier: ^5.0.0
+        version: 5.12.8
+      rpc-dart:
+        specifier: workspace:*
+        version: link:../../packages/typescript/cli
+      superjson:
+        specifier: ^2.2.3
+        version: 2.2.6
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@24.19.2)(jiti@2.7.0)
+
 packages:
 
   '@esbuild/aix-ppc64@0.28.2':

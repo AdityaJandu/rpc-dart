@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:trpc_dart/trpc_dart.dart';
 import 'package:trpc_flutter/trpc_flutter.dart';
@@ -63,7 +63,7 @@ void main() {
       },
     );
 
-    await tester.pumpWidget(MaterialApp(home: widget));
+    await tester.pumpWidget(WidgetsApp(color: const Color(0xFF000000), pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) => PageRouteBuilder<T>(settings: settings, pageBuilder: (BuildContext context, Animation<double> _, Animation<double> __) => builder(context)), home: widget));
     expect(find.text('loading'), findsOneWidget);
 
     await tester.pumpAndSettle();

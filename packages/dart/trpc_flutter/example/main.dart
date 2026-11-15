@@ -3,7 +3,7 @@
 ///
 /// Real apps call `listenable()` on generated procedure objects; this example
 /// builds the ref directly so the package documentation stands alone.
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:trpc_dart/trpc_dart.dart';
 import 'package:trpc_flutter/trpc_flutter.dart';
 
@@ -26,12 +26,11 @@ Future<void> main() async {
   );
 
   runApp(
-    MaterialApp(
-      home: Scaffold(
-        body: ValueListenableBuilder<RpcAsyncState<FakeUser>>(
+    WidgetsApp(color: const Color(0xFF000000), pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) => PageRouteBuilder<T>(settings: settings, pageBuilder: (BuildContext context, Animation<double> _, Animation<double> __) => builder(context)), 
+      home: Center(child: ValueListenableBuilder<RpcAsyncState<FakeUser>>(
           valueListenable: ref.listenable,
           builder: (context, state, _) => switch (state) {
-            RpcAsyncLoading() => const CircularProgressIndicator(),
+            RpcAsyncLoading() => const Text('Loading...'),
             RpcAsyncError() => const Text('failed'),
             RpcAsyncData() => Text('hello ${state.data.name}'),
           },

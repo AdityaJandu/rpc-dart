@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:trpc_dart/trpc_dart.dart';
 import 'package:trpc_flutter/trpc_flutter.dart';
 
@@ -35,23 +35,33 @@ class ShowcaseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('rpc-dart showcase')),
-        body: ListView(
+    return WidgetsApp(
+      color: const Color(0xFF000000),
+      pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
+          PageRouteBuilder<T>(
+        settings: settings,
+        pageBuilder: (BuildContext context, Animation<double> _, Animation<double> __) =>
+            builder(context),
+      ),
+      home: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
+            const Text('rpc-dart showcase'),
             const UserCard(),
-            ListTile(
-              title: const Text('Update nickname (PATCH semantics)'),
+            GestureDetector(
               onTap: () async {
                 await api.user.update.mutate(
                   const UserUpdateInput(promoCode: 'demo', nickname: RpcNull()),
                 );
                 api.invalidate(api.user.pathKey);
               },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('Update nickname (PATCH semantics)'),
+              ),
             ),
-            ListTile(
-              title: const Text('Refetch posts'),
+            GestureDetector(
               onTap: () async {
                 final page = await api.posts.list.query(
                   const PostsListInput(sort: PostsListInputSort.asc),
@@ -64,6 +74,10 @@ class ShowcaseApp extends StatelessWidget {
                   debugPrint('page2: ${page2.items.map((p) => p.id).join(',')}');
                 }
               },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('Refetch posts'),
+              ),
             ),
           ],
         ),
@@ -81,12 +95,22 @@ class UserCard extends StatelessWidget {
     return ValueListenableBuilder<RpcAsyncState<UserGetByIdOutput>>(
       valueListenable: api.user.me.listenable(),
       builder: (context, state, _) => switch (state) {
-        RpcAsyncLoading() => const CircularProgressIndicator(),
+        RpcAsyncLoading() => const Text('Loading...'),
         RpcAsyncError(:final error) => Text('error: $error'),
-        RpcAsyncData(:final data) => ListTile(
-            title: Text(data.name),
-            subtitle: Text('${data.id} - ${data.receipt.runtimeType.toString().split('.').last.replaceAll("Receipt", "").replaceAll("Unknown", "?")}'),
-            trailing: Text('-'),
+        RpcAsyncData(:final data) => Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(data.name),
+                  Text(
+                    '${data.id} - ${data.receipt.runtimeType.toString().split('.').last.replaceAll("Receipt", "").replaceAll("Unknown", "?")}',
+                  ),
+                ],
+              ),
+              const Text('-'),
+            ],
           ),
       },
     );

@@ -22,7 +22,8 @@ void main() {
       );
       expect(
         RpcQueryKey(path: const ['user', 'getById'], input: UserInput('u1')),
-        isNot(RpcQueryKey(path: const ['user', 'getById'], input: UserInput('u2'))),
+        isNot(RpcQueryKey(
+            path: const ['user', 'getById'], input: UserInput('u2'))),
       );
     });
 
@@ -38,23 +39,28 @@ void main() {
   });
 
   group('RpcQueryCache', () {
-    test('watch fetches immediately and replays state to new listeners', () async {
+    test('watch fetches immediately and replays state to new listeners',
+        () async {
       final cache = RpcQueryCache();
       var fetches = 0;
-      final ref = cache.watch<UserInput>(RpcQueryKey(path: const ['user']), () async {
+      final ref =
+          cache.watch<UserInput>(RpcQueryKey(path: const ['user']), () async {
         fetches++;
         return UserInput('u$fetches');
       });
 
-      final data = await ref.stream.firstWhere((s) => s is RpcAsyncData<UserInput>);
+      final data =
+          await ref.stream.firstWhere((s) => s is RpcAsyncData<UserInput>);
       expect((data as RpcAsyncData<UserInput>).data.id, 'u1');
       expect(ref.state, isA<RpcAsyncData<UserInput>>());
     });
 
-    test('invalidate triggers refetch of active watchers and emits keys', () async {
+    test('invalidate triggers refetch of active watchers and emits keys',
+        () async {
       final cache = RpcQueryCache();
       var fetches = 0;
-      final key = RpcQueryKey(path: const ['user', 'getById'], input: UserInput('u1'));
+      final key =
+          RpcQueryKey(path: const ['user', 'getById'], input: UserInput('u1'));
       final ref = cache.watch<UserInput>(key, () async {
         fetches++;
         return UserInput('u$fetches');
@@ -73,7 +79,8 @@ void main() {
 
       expect(fetches, 2, reason: 'invalidate refetches watched queries');
       expect(invalidated, contains(key));
-      expect(states.whereType<RpcAsyncData<UserInput>>().length, greaterThanOrEqualTo(2));
+      expect(states.whereType<RpcAsyncData<UserInput>>().length,
+          greaterThanOrEqualTo(2));
 
       await sub.cancel();
       await invalidationSub.cancel();
@@ -107,19 +114,23 @@ void main() {
       await ref.stream.first;
 
       cache.setQueryData<UserInput>(key, UserInput('patched'));
-      final next = await ref.stream
-          .firstWhere((s) => s is RpcAsyncData<UserInput> && s.data.id == 'patched');
+      final next = await ref.stream.firstWhere(
+          (s) => s is RpcAsyncData<UserInput> && s.data.id == 'patched');
       expect(next, isA<RpcAsyncData<UserInput>>());
     });
 
     test('onInvalidate with prefix filters the stream', () async {
       final cache = RpcQueryCache();
-      cache.watch<UserInput>(const RpcQueryKey(path: ['posts']), () async => UserInput('p'));
-      cache.watch<UserInput>(const RpcQueryKey(path: ['user', 'getById']), () async => UserInput('u'));
+      cache.watch<UserInput>(
+          const RpcQueryKey(path: ['posts']), () async => UserInput('p'));
+      cache.watch<UserInput>(const RpcQueryKey(path: ['user', 'getById']),
+          () async => UserInput('u'));
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
       final seen = <RpcQueryKey>[];
-      final sub = cache.onInvalidate(const RpcQueryKey(path: ['user'])).listen(seen.add);
+      final sub = cache
+          .onInvalidate(const RpcQueryKey(path: ['user']))
+          .listen(seen.add);
       cache.invalidate(const RpcQueryKey(path: ['posts']));
       cache.invalidate(const RpcQueryKey(path: ['user', 'getById']));
       await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -128,21 +139,24 @@ void main() {
       expect(seen.single.path, const ['user', 'getById']);
     });
 
-    test('fetch errors surface as RpcAsyncError and do not kill the stream', () async {
+    test('fetch errors surface as RpcAsyncError and do not kill the stream',
+        () async {
       final cache = RpcQueryCache();
       var attempts = 0;
-      final ref = cache.watch<UserInput>(const RpcQueryKey(path: ['user']), () async {
+      final ref =
+          cache.watch<UserInput>(const RpcQueryKey(path: ['user']), () async {
         attempts++;
         if (attempts == 1) throw RpcNetworkException('boom');
         return UserInput('ok');
       });
 
-      final failed = await ref.stream.firstWhere((s) => s is RpcAsyncError<UserInput>);
+      final failed =
+          await ref.stream.firstWhere((s) => s is RpcAsyncError<UserInput>);
       expect(failed, isA<RpcAsyncError<UserInput>>());
 
       await ref.refetch();
-      final recovered = await ref.stream
-          .firstWhere((s) => s is RpcAsyncData<UserInput>);
+      final recovered =
+          await ref.stream.firstWhere((s) => s is RpcAsyncData<UserInput>);
       expect(recovered, isA<RpcAsyncData<UserInput>>());
     });
   });

@@ -52,6 +52,9 @@ function createConsumer(): string {
       `    path: ${trpcFlutterPath}`,
       '  flutter:',
       '    sdk: flutter',
+      'dependency_overrides:',
+      '  trpc_dart:',
+      `    path: ${trpcDartPath}`,
       '',
     ].join('\n'),
   );

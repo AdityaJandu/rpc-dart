@@ -1,0 +1,3 @@
+dependency_overrides:
+  trpc_dart:
+    path: ../trpc_dart

@@ -69,7 +69,8 @@ final class RpcPresent<T> extends RpcOpt<T> {
   T? get valueOrNull => value;
 
   @override
-  bool operator ==(Object other) => other is RpcPresent<T> && other.value == value;
+  bool operator ==(Object other) =>
+      other is RpcPresent<T> && other.value == value;
 
   @override
   int get hashCode => Object.hash('RpcPresent', value);
@@ -85,16 +86,18 @@ sealed class JsonValue {
         final bool b => JBool(b),
         final num n => JNum(n),
         final String s => JString(s),
-        final List<Object?> l => JList([for (final e in l) JsonValue.fromJson(e)]),
-        final Map<String, Object?> m =>
-          JObject({for (final e in m.entries) e.key: JsonValue.fromJson(e.value)}),
+        final List<Object?> l =>
+          JList([for (final e in l) JsonValue.fromJson(e)]),
+        final Map<String, Object?> m => JObject(
+            {for (final e in m.entries) e.key: JsonValue.fromJson(e.value)}),
         _ => throw RpcDecodeException('value is not JSON-serializable'),
       };
 
   Object? toJson();
 
   /// Decoder signature for generated `RpcJson.requiredField` callbacks.
-  static JsonValue fromJsonOf(Object? value, String path) => JsonValue.fromJson(value);
+  static JsonValue fromJsonOf(Object? value, String path) =>
+      JsonValue.fromJson(value);
 
   bool? asBoolOrNull() => this is JBool ? (this as JBool).value : null;
 
@@ -102,9 +105,11 @@ sealed class JsonValue {
 
   String? asStringOrNull() => this is JString ? (this as JString).value : null;
 
-  List<JsonValue>? asListOrNull() => this is JList ? (this as JList).value : null;
+  List<JsonValue>? asListOrNull() =>
+      this is JList ? (this as JList).value : null;
 
-  Map<String, JsonValue>? asMapOrNull() => this is JObject ? (this as JObject).value : null;
+  Map<String, JsonValue>? asMapOrNull() =>
+      this is JObject ? (this as JObject).value : null;
 }
 
 final class JNull extends JsonValue {

@@ -1,3 +1,7 @@
+/// Flutter integration for trpc_dart: provides a [ValueListenable] bridge
+/// over cache-backed queries for [ValueListenableBuilder], Riverpod, BLoC, and Provider.
+library;
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -7,11 +11,17 @@ import 'package:trpc_dart/trpc_dart.dart';
 /// The listenable updates on data, error, loading, invalidation-triggered
 /// refetches, and explicit cache writes.
 extension RpcQueryRefFlutter<T> on RpcQueryRef<T> {
-  ValueListenable<RpcAsyncState<T>> get listenable => _RpcQueryListenable<T>(this);
+  /// Returns a [ValueListenable] that emits updates whenever this query ref transitions
+  /// between loading, data, or error states.
+  ValueListenable<RpcAsyncState<T>> get listenable =>
+      _RpcQueryListenable<T>(this);
 }
 
 /// `api.user.getById.listenable(input)` ergonomics for generated procedures.
-extension RpcWatchableFlutter<TInput, TOutput> on RpcWatchable<TInput, TOutput> {
+extension RpcWatchableFlutter<TInput, TOutput>
+    on RpcWatchable<TInput, TOutput> {
+  /// Watches the procedure with [input] and returns a [ValueListenable]
+  /// tracking its [RpcAsyncState].
   ValueListenable<RpcAsyncState<TOutput>> listenable(
     TInput input, {
     RpcCallContext? context,
@@ -22,7 +32,10 @@ extension RpcWatchableFlutter<TInput, TOutput> on RpcWatchable<TInput, TOutput> 
 
 /// No-input ergonomics: `api.user.me.listenable()`.
 extension RpcWatchableNoInputFlutter<TOutput> on RpcWatchableNoInput<TOutput> {
-  ValueListenable<RpcAsyncState<TOutput>> listenable({RpcCallContext? context}) {
+  /// Watches the procedure without input and returns a [ValueListenable]
+  /// tracking its [RpcAsyncState].
+  ValueListenable<RpcAsyncState<TOutput>> listenable(
+      {RpcCallContext? context}) {
     return watch(context: context).listenable;
   }
 }

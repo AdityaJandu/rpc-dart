@@ -23,11 +23,14 @@ void main() {
       endpoint: Uri.parse('http://127.0.0.1:$port/trpc'),
       transformer: RpcTransformer.superjson,
       defaultHeaders: const {'authorization': 'Bearer u1'},
-      links: [HttpBatchLink(endpoint: Uri.parse('http://127.0.0.1:$port/trpc'))],
+      links: [
+        HttpBatchLink(endpoint: Uri.parse('http://127.0.0.1:$port/trpc'))
+      ],
     );
   });
 
-  test('query round trip decodes Date/BigInt and the discriminated union', () async {
+  test('query round trip decodes Date/BigInt and the discriminated union',
+      () async {
     final data = await client.execute(
       const RpcRequest(
         path: 'user.getById',
@@ -64,7 +67,8 @@ void main() {
     expect(posts['nextCursor'], isNull);
   });
 
-  test('mutation accepts explicit null and absent optional-nullable fields', () async {
+  test('mutation accepts explicit null and absent optional-nullable fields',
+      () async {
     final withNull = await client.execute(const RpcRequest(
       path: 'user.update',
       kind: RpcProcedureKind.mutation,
@@ -84,7 +88,9 @@ void main() {
     final anonymous = RpcClient(
       endpoint: Uri.parse('http://127.0.0.1:$port/trpc'),
       transformer: RpcTransformer.superjson,
-      links: [HttpBatchLink(endpoint: Uri.parse('http://127.0.0.1:$port/trpc'))],
+      links: [
+        HttpBatchLink(endpoint: Uri.parse('http://127.0.0.1:$port/trpc'))
+      ],
     );
     await expectLater(
       anonymous.execute(const RpcRequest(
@@ -120,8 +126,7 @@ void main() {
     await ref.stream.firstWhere((s) => s is RpcAsyncData<Map<String, Object?>>);
 
     client.cache.invalidate(const RpcQueryKey(path: ['user']));
-    await ref.stream
-        .firstWhere((s) => s is RpcAsyncData<Map<String, Object?>>);
+    await ref.stream.firstWhere((s) => s is RpcAsyncData<Map<String, Object?>>);
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     expect(calls, 2, reason: 'invalidate refetched the watched query');

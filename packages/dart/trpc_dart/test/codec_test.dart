@@ -3,7 +3,8 @@ import 'package:trpc_dart/trpc_dart.dart';
 
 void main() {
   group('SuperJSON decode', () {
-    test('unwraps an envelope with Date/bigint annotations (real wire shape)', () {
+    test('unwraps an envelope with Date/bigint annotations (real wire shape)',
+        () {
       final envelope = <String, Object?>{
         'json': <String, Object?>{
           'id': 'u1',
@@ -36,23 +37,33 @@ void main() {
         'meta': <String, Object?>{
           'values': <String, Object?>{
             'items': <String, Object?>{
-              '0': <String, Object?>{'when': <Object?>['Date']},
+              '0': <String, Object?>{
+                'when': <Object?>['Date']
+              },
             },
-            'inner': <String, Object?>{'big': <Object?>['bigint']},
+            'inner': <String, Object?>{
+              'big': <Object?>['bigint']
+            },
           },
         },
       };
       final tree = superjsonDecode(envelope) as Map<String, Object?>;
       final items = tree['items'] as List<Object?>;
-      expect((items[0] as Map<String, Object?>)['when'], DateTime.utc(2026, 2, 1));
+      expect(
+          (items[0] as Map<String, Object?>)['when'], DateTime.utc(2026, 2, 1));
       expect((tree['inner'] as Map<String, Object?>)['big'], BigInt.from(999));
     });
 
-    test('handles flat dotted-path annotations (real wire shape, nested objects)', () {
+    test(
+        'handles flat dotted-path annotations (real wire shape, nested objects)',
+        () {
       final envelope = <String, Object?>{
         'json': <String, Object?>{
           'id': 'u1',
-          'receipt': <String, Object?>{'kind': 'card', 'authorizedAt': '2026-01-15T10:00:00.000Z'},
+          'receipt': <String, Object?>{
+            'kind': 'card',
+            'authorizedAt': '2026-01-15T10:00:00.000Z'
+          },
         },
         'meta': <String, Object?>{
           'v': 1,
@@ -81,7 +92,8 @@ void main() {
       };
       final tree = superjsonDecode(envelope) as Map<String, Object?>;
       final items = tree['items'] as List<Object?>;
-      expect((items[0] as Map<String, Object?>)['when'], DateTime.utc(2026, 2, 1));
+      expect(
+          (items[0] as Map<String, Object?>)['when'], DateTime.utc(2026, 2, 1));
     });
 
     test('decodes NaN/Infinity annotations', () {
@@ -108,7 +120,8 @@ void main() {
           },
         },
       };
-      expect(() => superjsonDecode(envelope), throwsA(isA<RpcDecodeException>()));
+      expect(
+          () => superjsonDecode(envelope), throwsA(isA<RpcDecodeException>()));
     });
   });
 
@@ -124,7 +137,8 @@ void main() {
       expect(json['when'], '2026-01-15T10:00:00.000Z');
       expect(json['big'], '42');
       expect(json['plain'], 'x');
-      final values = (envelope['meta'] as Map<String, Object?>)['values'] as Map<String, Object?>;
+      final values = (envelope['meta'] as Map<String, Object?>)['values']
+          as Map<String, Object?>;
       expect(values['when'], <Object?>['Date']);
       expect(values['big'], <Object?>['bigint']);
     });
@@ -134,13 +148,15 @@ void main() {
         'when': DateTime.utc(2026, 3, 4),
         'big': BigInt.from(7),
       };
-      final decoded = superjsonDecode(superjsonEncode(input)) as Map<String, Object?>;
+      final decoded =
+          superjsonDecode(superjsonEncode(input)) as Map<String, Object?>;
       expect(decoded['when'], DateTime.utc(2026, 3, 4));
       expect(decoded['big'], BigInt.from(7));
     });
 
     test('plain inputs produce a json-only envelope (no meta)', () {
-      final envelope = superjsonEncode(<String, Object?>{'id': 'u1'}) as Map<String, Object?>;
+      final envelope = superjsonEncode(<String, Object?>{'id': 'u1'})
+          as Map<String, Object?>;
       expect(envelope['json'], <String, Object?>{'id': 'u1'});
       expect(envelope.containsKey('meta'), isFalse);
     });

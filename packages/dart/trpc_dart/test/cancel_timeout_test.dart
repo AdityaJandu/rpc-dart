@@ -7,7 +7,8 @@ import 'package:trpc_dart/trpc_dart.dart';
 
 void main() {
   group('cancellation inside HttpBatchLink', () {
-    test('cancel before dispatch removes the operation without aborting siblings',
+    test(
+        'cancel before dispatch removes the operation without aborting siblings',
         () async {
       final served = <Uri>[];
       final client = RpcClient(

@@ -13,6 +13,7 @@ import 'link.dart';
 /// requests, splits oversized GET batches, and demultiplexes the
 /// index-aligned responses.
 final class HttpBatchLink extends RpcLink {
+  /// Creates a batching transport link targeting [endpoint].
   HttpBatchLink({
     required this.endpoint,
     this.transformer = RpcTransformer.superjson,
@@ -21,9 +22,16 @@ final class HttpBatchLink extends RpcLink {
     http.Client? client,
   }) : _client = client ?? http.Client();
 
+  /// Server tRPC base endpoint URI.
   final Uri endpoint;
+
+  /// Transformer matching server configuration.
   final RpcTransformer transformer;
+
+  /// Maximum character length of URL before GET batch is split or converted to POST.
   final int maxURLLength;
+
+  /// Maximum procedure calls batched in a single request.
   final int maxBatchSize;
   final http.Client _client;
 
@@ -33,6 +41,7 @@ final class HttpBatchLink extends RpcLink {
   @override
   bool get isTermination => true;
 
+  /// Enqueues the request into the current microtask batch queue and returns its completion future.
   @override
   Future<Object?> invoke(RpcRequest request, RpcLinkNext next) {
     final pending = _Pending(request);
@@ -63,13 +72,15 @@ final class HttpBatchLink extends RpcLink {
         if (!pending.completer.isCompleted) {
           pending.discarded = true;
           pending.completer.completeError(
-            RpcTimeoutException('operation exceeded the ${timeout.inMilliseconds}ms timeout'),
+            RpcTimeoutException(
+                'operation exceeded the ${timeout.inMilliseconds}ms timeout'),
           );
         }
       }));
     }
   }
 
+  /// Closes the underlying HTTP client.
   void close() {
     _client.close();
   }
@@ -103,12 +114,10 @@ final class HttpBatchLink extends RpcLink {
     }
     if (live.isEmpty) return;
 
-    final queries = live
-        .where((p) => p.request.kind == RpcProcedureKind.query)
-        .toList();
-    final mutations = live
-        .where((p) => p.request.kind == RpcProcedureKind.mutation)
-        .toList();
+    final queries =
+        live.where((p) => p.request.kind == RpcProcedureKind.query).toList();
+    final mutations =
+        live.where((p) => p.request.kind == RpcProcedureKind.mutation).toList();
     final futures = <Future<void>>[
       if (queries.isNotEmpty) _sendGroup(queries, isMutation: false),
       if (mutations.isNotEmpty) _sendGroup(mutations, isMutation: true),
@@ -116,16 +125,19 @@ final class HttpBatchLink extends RpcLink {
     await Future.wait(futures);
   }
 
-  Future<void> _sendGroup(List<_Pending> group, {required bool isMutation}) async {
+  Future<void> _sendGroup(List<_Pending> group,
+      {required bool isMutation}) async {
     final futures = <Future<void>>[];
     for (var start = 0; start < group.length; start += maxBatchSize) {
       final end = math.min(start + maxBatchSize, group.length);
-      futures.add(_sendChunk(group.sublist(start, end), isMutation: isMutation));
+      futures
+          .add(_sendChunk(group.sublist(start, end), isMutation: isMutation));
     }
     await Future.wait(futures);
   }
 
-  Future<void> _sendChunk(List<_Pending> chunk, {required bool isMutation}) async {
+  Future<void> _sendChunk(List<_Pending> chunk,
+      {required bool isMutation}) async {
     try {
       if (!isMutation) {
         await _sendGet(chunk);
@@ -157,7 +169,8 @@ final class HttpBatchLink extends RpcLink {
     final paths = chunk.map((p) => p.request.path).join(',');
     final url = '${_base()}/${_encodePath(paths)}';
     final batched = chunk.length > 1;
-    final body = batched ? _buildBodyDict(chunk) : _bodyFor(chunk.first.request);
+    final body =
+        batched ? _buildBodyDict(chunk) : _bodyFor(chunk.first.request);
     final response = await _client.post(
       Uri.parse(url),
       headers: <String, String>{
@@ -182,7 +195,8 @@ final class HttpBatchLink extends RpcLink {
   String _buildGetUrl(List<_Pending> chunk) {
     final paths = chunk.map((p) => p.request.path).join(',');
     final batched = chunk.length > 1;
-    final input = batched ? _buildInputDict(chunk) : _inputJsonFor(chunk.first.request);
+    final input =
+        batched ? _buildInputDict(chunk) : _inputJsonFor(chunk.first.request);
     final params = <String>[];
     if (batched) params.add('batch=1');
     if (input != null) params.add('input=${Uri.encodeComponent(input)}');
@@ -231,7 +245,8 @@ final class HttpBatchLink extends RpcLink {
     return request.context?.headers ?? const <String, String>{};
   }
 
-  void _demux(List<_Pending> chunk, http.Response response, {required bool batched}) {
+  void _demux(List<_Pending> chunk, http.Response response,
+      {required bool batched}) {
     final decoded = _parseBody(response.body);
     if (batched) {
       if (decoded is! List<Object?>) {

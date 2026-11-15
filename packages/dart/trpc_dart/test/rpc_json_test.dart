@@ -39,7 +39,8 @@ void main() {
     test('asInt accepts int and integral num, rejects fractional', () {
       expect(RpcJson.asInt(3), 3);
       expect(RpcJson.asInt(3.0), 3);
-      expectDecodeError(3.5, r'$.count', 'int', () => RpcJson.asInt(3.5, r'$.count'));
+      expectDecodeError(
+          3.5, r'$.count', 'int', () => RpcJson.asInt(3.5, r'$.count'));
     });
 
     test('asNum accepts any num', () {
@@ -49,8 +50,8 @@ void main() {
 
     test('asBool accepts bool only', () {
       expect(RpcJson.asBool(true), isTrue);
-      expectDecodeError('true', r'$.flag', 'bool',
-          () => RpcJson.asBool('true', r'$.flag'));
+      expectDecodeError(
+          'true', r'$.flag', 'bool', () => RpcJson.asBool('true', r'$.flag'));
     });
 
     test('asDateTime handles decoded DateTime and ISO strings', () {
@@ -74,20 +75,27 @@ void main() {
 
   group('RpcJson collections', () {
     test('asList decodes items with indexed paths', () {
-      final result = RpcJson.asList<int>([1, 2], // ignore: unnecessary_lambdas
-        RpcJson.asInt);
+      final result = RpcJson.asList<int>(
+          [1, 2], // ignore: unnecessary_lambdas
+          RpcJson.asInt);
       expect(result, [1, 2]);
     });
 
     test('asList throws with item path on bad element', () {
-      expectDecodeError([1, 'x'], r'$.items[1]', 'int',
-          () => RpcJson.asList<int>([1, 'x'], // ignore: unnecessary_lambdas
-        RpcJson.asInt, r'$.items'));
+      expectDecodeError(
+          [1, 'x'],
+          r'$.items[1]',
+          'int',
+          () => RpcJson.asList<int>(
+              [1, 'x'], // ignore: unnecessary_lambdas
+              RpcJson.asInt,
+              r'$.items'));
     });
 
     test('asSet decodes into a set', () {
-      final result = RpcJson.asSet<String>(['a', 'b'], // ignore: unnecessary_lambdas
-        RpcJson.asString);
+      final result = RpcJson.asSet<String>(
+          ['a', 'b'], // ignore: unnecessary_lambdas
+          RpcJson.asString);
       expect(result, <String>{'a', 'b'});
     });
 
@@ -102,11 +110,15 @@ void main() {
 
     test('asTypedMap throws with per-entry value path', () {
       expectDecodeError(
-        {'counts': <String, Object?>{'a': 'nope'}},
+        {
+          'counts': <String, Object?>{'a': 'nope'}
+        },
         r'$.counts.a',
         'int',
         () => RpcJson.asTypedMap<String, int>(
-          RpcJson.asMap({'counts': <String, Object?>{'a': 'nope'}})['counts']!,
+          RpcJson.asMap({
+            'counts': <String, Object?>{'a': 'nope'}
+          })['counts']!,
           RpcJson.asString,
           RpcJson.asInt,
           r'$.counts',
@@ -124,7 +136,8 @@ void main() {
   group('RpcJson field readers', () {
     test('requiredField decodes present values with Model.field path', () {
       expect(
-        RpcJson.requiredField({'id': 'u1'}, 'id', RpcJson.asString, model: 'UserGetByIdInput'),
+        RpcJson.requiredField({'id': 'u1'}, 'id', RpcJson.asString,
+            model: 'UserGetByIdInput'),
         'u1',
       );
     });
@@ -134,7 +147,8 @@ void main() {
         {},
         'UserGetByIdInput.id',
         'present',
-        () => RpcJson.requiredField({}, 'id', RpcJson.asString, model: 'UserGetByIdInput'),
+        () => RpcJson.requiredField({}, 'id', RpcJson.asString,
+            model: 'UserGetByIdInput'),
       );
     });
 
@@ -143,7 +157,8 @@ void main() {
         {'id': 42},
         'UserGetByIdInput.id',
         'String',
-        () => RpcJson.requiredField({'id': 42}, 'id', RpcJson.asString, model: 'UserGetByIdInput'),
+        () => RpcJson.requiredField({'id': 42}, 'id', RpcJson.asString,
+            model: 'UserGetByIdInput'),
       );
     });
 
@@ -167,7 +182,8 @@ void main() {
         {'cursor': 5},
         'PostsListInput.cursor',
         'String',
-        () => RpcJson.optionalField({'cursor': 5}, 'cursor', RpcJson.asString, model: 'PostsListInput'),
+        () => RpcJson.optionalField({'cursor': 5}, 'cursor', RpcJson.asString,
+            model: 'PostsListInput'),
       );
     });
   });
@@ -190,12 +206,13 @@ void main() {
 
     test('absent and null still map to RpcAbsent and RpcNull', () {
       expect(
-        RpcOpt.decode<String>({}, 'nickname', model: 'M', decode: RpcJson.asString),
+        RpcOpt.decode<String>({}, 'nickname',
+            model: 'M', decode: RpcJson.asString),
         isA<RpcAbsent<String>>(),
       );
       expect(
-        RpcOpt.decode<String>({'nickname': null}, 'nickname', model: 'M',
-            decode: RpcJson.asString),
+        RpcOpt.decode<String>({'nickname': null}, 'nickname',
+            model: 'M', decode: RpcJson.asString),
         isA<RpcNull<String>>(),
       );
     });

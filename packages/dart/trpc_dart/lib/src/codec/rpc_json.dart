@@ -16,7 +16,8 @@ class RpcJson {
     return value.runtimeType.toString();
   }
 
-  static RpcDecodeException _typeError(String path, String expected, Object? actual) {
+  static RpcDecodeException _typeError(
+      String path, String expected, Object? actual) {
     return RpcDecodeException(
       'expected $expected but received ${_typeName(actual)}',
       path: path,
@@ -25,11 +26,13 @@ class RpcJson {
     );
   }
 
+  /// Validates that [value] is a [String] and returns it, or throws [RpcDecodeException].
   static String asString(Object? value, [String path = r'$']) {
     if (value case final String v) return v;
     throw _typeError(path, 'String', value);
   }
 
+  /// Validates that [value] is an integer and returns it, or throws [RpcDecodeException].
   static int asInt(Object? value, [String path = r'$']) {
     switch (value) {
       case final int v:
@@ -41,6 +44,7 @@ class RpcJson {
     }
   }
 
+  /// Validates that [value] is a numeric double and returns it, or throws [RpcDecodeException].
   static double asDouble(Object? value, [String path = r'$']) {
     switch (value) {
       case final num v:
@@ -50,11 +54,13 @@ class RpcJson {
     }
   }
 
+  /// Validates that [value] is a [num] and returns it, or throws [RpcDecodeException].
   static num asNum(Object? value, [String path = r'$']) {
     if (value case final num v) return v;
     throw _typeError(path, 'num', value);
   }
 
+  /// Validates that [value] is a [bool] and returns it, or throws [RpcDecodeException].
   static bool asBool(Object? value, [String path = r'$']) {
     if (value case final bool v) return v;
     throw _typeError(path, 'bool', value);
@@ -107,6 +113,7 @@ class RpcJson {
     }
   }
 
+  /// Validates that [value] is a [Map] and returns it, converting keys to [String].
   static Map<String, Object?> asMap(Object? value, [String path = r'$']) {
     switch (value) {
       case final Map<String, Object?> m:
@@ -118,6 +125,7 @@ class RpcJson {
     }
   }
 
+  /// Decodes a [List] by running [decodeItem] on each element.
   static List<T> asList<T>(
     Object? value,
     T Function(Object? item, String itemPath) decodeItem, [
@@ -135,6 +143,7 @@ class RpcJson {
     }
   }
 
+  /// Decodes a [Set] by running [decodeItem] on each element.
   static Set<T> asSet<T>(
     Object? value,
     T Function(Object? item, String itemPath) decodeItem, [
@@ -160,6 +169,7 @@ class RpcJson {
     }
   }
 
+  /// Decodes a typed [Map] with [decodeKey] and [decodeVal] mappers.
   static Map<K, V> asTypedMap<K, V>(
     Object? value,
     K Function(Object? key, String keyPath) decodeKey,

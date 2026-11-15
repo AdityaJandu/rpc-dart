@@ -4,28 +4,33 @@ import 'package:trpc_dart/trpc_dart.dart';
 void main() {
   group('RpcOpt', () {
     test('decode: absent key -> RpcAbsent', () {
-      final opt = RpcOpt.decode<String>({'other': 'x'}, 'nickname', decode: RpcJson.asString);
+      final opt = RpcOpt.decode<String>({'other': 'x'}, 'nickname',
+          decode: RpcJson.asString);
       expect(opt, isA<RpcAbsent<String>>());
       expect(opt.valueOrNull, isNull);
     });
 
     test('decode: explicit null -> RpcNull', () {
-      final opt = RpcOpt.decode<String>({'nickname': null}, 'nickname', decode: RpcJson.asString);
+      final opt = RpcOpt.decode<String>({'nickname': null}, 'nickname',
+          decode: RpcJson.asString);
       expect(opt, isA<RpcNull<String>>());
       expect(opt.valueOrNull, isNull);
     });
 
     test('decode: present value -> RpcPresent with decoded value', () {
-      final opt = RpcOpt.decode<String>({'nickname': 'Ada'}, 'nickname', decode: RpcJson.asString);
+      final opt = RpcOpt.decode<String>({'nickname': 'Ada'}, 'nickname',
+          decode: RpcJson.asString);
       expect(opt, isA<RpcPresent<String>>());
       expect(opt.valueOrNull, 'Ada');
     });
 
-    test('present/null/absent are distinguishable and equal within their kind', () {
+    test('present/null/absent are distinguishable and equal within their kind',
+        () {
       expect(const RpcNull<String>(), const RpcNull<String>());
       expect(const RpcAbsent<String>(), const RpcAbsent<String>());
       expect(const RpcPresent<String>('Ada'), const RpcPresent<String>('Ada'));
-      expect(const RpcPresent<String>('Ada'), isNot(const RpcPresent<String>('Grace')));
+      expect(const RpcPresent<String>('Ada'),
+          isNot(const RpcPresent<String>('Grace')));
       expect(const RpcNull<String>(), isNot(const RpcAbsent<String>()));
     });
 
@@ -62,31 +67,63 @@ void main() {
     });
 
     test('equality is deep', () {
-      final a = JsonValue.fromJson(<Object?>[1, <String, Object?>{'x': 'y'}]);
-      final b = JsonValue.fromJson(<Object?>[1, <String, Object?>{'x': 'y'}]);
+      final a = JsonValue.fromJson(<Object?>[
+        1,
+        <String, Object?>{'x': 'y'}
+      ]);
+      final b = JsonValue.fromJson(<Object?>[
+        1,
+        <String, Object?>{'x': 'y'}
+      ]);
       expect(a, b);
     });
   });
 
   group('rpcDeepEquals / rpcDeepHash', () {
     test('deep list equality', () {
-      expect(rpcDeepEquals(<Object?>[1, [2, 3]], <Object?>[1, [2, 3]]), isTrue);
-      expect(rpcDeepEquals(<Object?>[1, [2, 3]], <Object?>[1, [2, 4]]), isFalse);
+      expect(
+          rpcDeepEquals(<Object?>[
+            1,
+            [2, 3]
+          ], <Object?>[
+            1,
+            [2, 3]
+          ]),
+          isTrue);
+      expect(
+          rpcDeepEquals(<Object?>[
+            1,
+            [2, 3]
+          ], <Object?>[
+            1,
+            [2, 4]
+          ]),
+          isFalse);
     });
 
     test('deep map equality', () {
       expect(
         rpcDeepEquals(
-          <String, Object?>{'a': <Object?>[1]},
-          <String, Object?>{'a': <Object?>[1]},
+          <String, Object?>{
+            'a': <Object?>[1]
+          },
+          <String, Object?>{
+            'a': <Object?>[1]
+          },
         ),
         isTrue,
       );
     });
 
     test('hash equality follows equality', () {
-      final a = <Object?>[1, [2, 3]];
-      final b = <Object?>[1, [2, 3]];
+      final a = <Object?>[
+        1,
+        [2, 3]
+      ];
+      final b = <Object?>[
+        1,
+        [2, 3]
+      ];
       expect(rpcDeepHash(a), rpcDeepHash(b));
     });
   });

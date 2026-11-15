@@ -65,6 +65,9 @@ describe('renaming a procedure breaks the consumer at compile time', () => {
           `    path: ${trpcFlutter}`,
           '  flutter:',
           '    sdk: flutter',
+          'dependency_overrides:',
+          '  trpc_dart:',
+          `    path: ${trpcDart}`,
           '',
         ].join('\n'),
       );

@@ -12,7 +12,8 @@ Future<void> main() async {
     transformer: RpcTransformer.superjson,
     defaultHeaders: const {'authorization': 'Bearer demo-token'},
     links: [
-      LoggingLink(onEvent: (event) => print('[rpc] ${event.event} ${event.path}')),
+      LoggingLink(
+          onEvent: (event) => print('[rpc] ${event.event} ${event.path}')),
       RetryLink(policy: const RpcRetryPolicy(maxAttempts: 3)),
       HttpBatchLink(endpoint: Uri.parse('https://api.example.com/trpc')),
     ],

@@ -11,16 +11,19 @@ import 'link.dart';
 /// defaults link just before the transport) -> ContextLink dynamic headers
 /// -> AuthLink credentials -> per-call [RpcCallContext.headers].
 class ContextLink extends RpcLink {
+  /// Creates a context link with dynamic header provider and correlation toggle.
   ContextLink({this.dynamicHeaders, this.correlate = true});
 
   /// Resolves app-level headers for every request. These fill keys that are
   /// not already set by per-call context or credentials.
   final Future<Map<String, String>> Function()? dynamicHeaders;
 
+  /// Whether to generate and attach an `x-request-id` header if none is present.
   final bool correlate;
 
   int _counter = 0;
 
+  /// Applies dynamic headers and request ID correlation before invoking the next link.
   @override
   Future<Object?> invoke(RpcRequest request, RpcLinkNext next) async {
     var req = request;

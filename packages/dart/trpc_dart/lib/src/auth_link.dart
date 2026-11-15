@@ -12,7 +12,12 @@ import 'link.dart';
 ///   refreshed credentials.
 /// - A second 401 after replay surfaces to the caller: no refresh loops.
 class AuthLink extends RpcLink {
-  AuthLink({required this.getHeaders, this.onUnauthorized, this.overrideExisting = false});
+  /// Creates an authentication link with credential resolver [getHeaders]
+  /// and optional [onUnauthorized] refresh handler.
+  AuthLink(
+      {required this.getHeaders,
+      this.onUnauthorized,
+      this.overrideExisting = false});
 
   /// Resolves the current credential headers (e.g. `authorization`).
   final Future<Map<String, String>> Function() getHeaders;
@@ -30,6 +35,7 @@ class AuthLink extends RpcLink {
 
   Completer<bool>? _refreshLock;
 
+  /// Intercepts the request, attaches credentials, and performs a single refresh on 401.
   @override
   Future<Object?> invoke(RpcRequest request, RpcLinkNext next) async {
     final headers = await getHeaders();

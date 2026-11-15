@@ -16,13 +16,16 @@ class RecordingTransport extends RpcLink {
 
 void main() {
   group('ContextLink merge precedence', () {
-    test('per-call > dynamic > client defaults (auth handled by AuthLink)', () async {
+    test('per-call > dynamic > client defaults (auth handled by AuthLink)',
+        () async {
       final transport = RecordingTransport();
       final client = RpcClient(
         endpoint: Uri.parse('http://localhost/trpc'),
         defaultHeaders: {'x-client': 'client', 'x-shared': 'from-client'},
         links: [
-          ContextLink(dynamicHeaders: () async => {'x-shared': 'from-dynamic', 'x-dynamic': 'd1'}),
+          ContextLink(
+              dynamicHeaders: () async =>
+                  {'x-shared': 'from-dynamic', 'x-dynamic': 'd1'}),
           transport,
         ],
       );
@@ -31,7 +34,8 @@ void main() {
         path: 'user.me',
         kind: RpcProcedureKind.query,
         input: null,
-        context: RpcCallContext(headers: {'x-shared': 'from-call', 'x-call': 'c1'}),
+        context:
+            RpcCallContext(headers: {'x-shared': 'from-call', 'x-call': 'c1'}),
       ));
 
       final headers = transport.single.context!.headers;
@@ -61,7 +65,8 @@ void main() {
       expect(transport.single.context!.headers['x-client'], 'dynamic');
     });
 
-    test('per-call wins over client defaults without any dynamic source', () async {
+    test('per-call wins over client defaults without any dynamic source',
+        () async {
       final transport = RecordingTransport();
       final client = RpcClient(
         endpoint: Uri.parse('http://localhost/trpc'),
@@ -89,9 +94,9 @@ void main() {
       );
 
       await client.execute(const RpcRequest(
-        path: 'user.me', kind: RpcProcedureKind.query, input: null));
+          path: 'user.me', kind: RpcProcedureKind.query, input: null));
       await client.execute(const RpcRequest(
-        path: 'user.me', kind: RpcProcedureKind.query, input: null));
+          path: 'user.me', kind: RpcProcedureKind.query, input: null));
 
       final a = transport.requests[0].header('x-request-id');
       final b = transport.requests[1].header('x-request-id');

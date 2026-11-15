@@ -7,7 +7,11 @@ void main() {
       final exception = RpcException.fromWire(const {
         'message': 'unauthorized',
         'code': -32001,
-        'data': {'code': 'UNAUTHORIZED', 'httpStatus': 401, 'path': 'user.getById'},
+        'data': {
+          'code': 'UNAUTHORIZED',
+          'httpStatus': 401,
+          'path': 'user.getById'
+        },
       });
       expect(exception, isA<RpcUnauthorizedException>());
       expect(exception.message, 'unauthorized');
@@ -26,7 +30,9 @@ void main() {
           'path': 'user.update',
           'zodError': {
             'formErrors': <String>[],
-            'fieldErrors': {'name': <String>['too short']},
+            'fieldErrors': {
+              'name': <String>['too short']
+            },
           },
         },
       });
@@ -69,7 +75,10 @@ void main() {
   group('link chain', () {
     test('rejects multiple termination links', () {
       expect(
-        () => RpcLinkChain([HttpBatchLink(endpoint: Uri.parse('http://x/trpc')), HttpBatchLink(endpoint: Uri.parse('http://x/trpc'))]),
+        () => RpcLinkChain([
+          HttpBatchLink(endpoint: Uri.parse('http://x/trpc')),
+          HttpBatchLink(endpoint: Uri.parse('http://x/trpc'))
+        ]),
         throwsArgumentError,
       );
     });
@@ -88,7 +97,8 @@ void main() {
       );
       // Port 1: connection refused -> RpcNetworkException bubbles through links.
       await expectLater(
-        client.execute(RpcRequest(path: 'user.me', kind: RpcProcedureKind.query, input: null)),
+        client.execute(RpcRequest(
+            path: 'user.me', kind: RpcProcedureKind.query, input: null)),
         throwsA(isA<RpcNetworkException>()),
       );
       expect(seen, ['a', 'b']);

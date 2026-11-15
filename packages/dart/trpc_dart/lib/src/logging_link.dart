@@ -2,6 +2,7 @@ import 'link.dart';
 
 /// One structured log event: 'request', 'response', or 'error'.
 class RpcLogEvent {
+  /// Creates a structured RPC log event.
   const RpcLogEvent({
     required this.event,
     required this.path,
@@ -11,11 +12,22 @@ class RpcLogEvent {
     this.error,
   });
 
+  /// Event type string: `'request'`, `'response'`, or `'error'`.
   final String event;
+
+  /// Dotted procedure path.
   final String path;
+
+  /// The procedure kind (`'query'`, `'mutation'`, `'subscription'`).
   final String kind;
+
+  /// Sanitized request headers with secrets redacted.
   final Map<String, String> headers;
+
+  /// Operation duration in milliseconds (0 for request start).
   final int durationMs;
+
+  /// Optional error object when event is `'error'`.
   final Object? error;
 
   @override
@@ -29,11 +41,13 @@ class RpcLogEvent {
 /// user-configured names are replaced with `[REDACTED]` before any sink runs
 ///.
 class LoggingLink extends RpcLink {
+  /// Creates a logging link that passes structured events to [onEvent].
   LoggingLink({
     required this.onEvent,
     this.redactHeaders = const {},
   });
 
+  /// Callback invoked on request, response, and error events.
   final void Function(RpcLogEvent event) onEvent;
 
   /// Additional case-insensitive header names to redact.
@@ -61,6 +75,7 @@ class LoggingLink extends RpcLink {
     return out;
   }
 
+  /// Logs request dispatch, timing, and response or error events.
   @override
   Future<Object?> invoke(RpcRequest request, RpcLinkNext next) async {
     final stopwatch = Stopwatch()..start();

@@ -39,7 +39,7 @@ beforeAll(async () => {
         resolve(Number(match[1]));
       }
     });
-    child!.on('exit', (code) => reject(new Error(`fixture server exited early (${code})`)));
+    let stderrBuf = ''; child!.stderr?.on('data', (d) => { stderrBuf += String(d); }); child!.on('exit', (code) => reject(new Error(`fixture server exited early (${code}): ${stderrBuf}`)));
   });
   port = await ready;
   const probe = await fetch(`http://127.0.0.1:${port}/trpc/user.me`);

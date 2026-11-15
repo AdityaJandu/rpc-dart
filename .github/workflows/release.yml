@@ -40,13 +40,14 @@ jobs:
 
       - name: Publish to npm with provenance (idempotent)
         run: |
-          VER=$(node -p "require('./packages/typescript/core/package.json').version")
-          for pkg in "@rpc-dart/core" "@rpc-dart/trpc-adapter" "@rpc-dart/dart-generator" "rpc-dart"; do
+          for dir in "packages/typescript/core" "packages/typescript/trpc-adapter" "packages/typescript/dart-generator" "packages/typescript/cli"; do
+            pkg=$(node -p "require('./${dir}/package.json').name")
+            VER=$(node -p "require('./${dir}/package.json').version")
             if npm view "${pkg}@${VER}" version >/dev/null 2>&1; then
               echo "✓ ${pkg}@${VER} is already published on npm — skipping"
             else
-              echo "Publishing ${pkg}@${VER}..."
-              pnpm --filter "${pkg}" publish --access public --no-git-checks --provenance
+              echo "Publishing ${pkg}@${VER} from ${dir}..."
+              pnpm --filter "./${dir}" publish --access public --no-git-checks --provenance
             fi
           done
 

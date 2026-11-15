@@ -2,17 +2,18 @@
 
 Project tracker for shipped milestones and upcoming engineering work. Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Release & registry launch tracker (v0.1.0 deployment)
+## Release & registry launch tracker (v0.1.0 – v0.1.3 deployed)
 
-- [ ] Create the `@rpc-dart` organization on npmjs.com ( granular access token with `Read and write (publish and stage)` + `Bypass 2FA` enabled).
-- [ ] Save the npm token as `NPM_TOKEN` in GitHub Actions repository secrets.
-- [ ] Create accounts on pub.dev with a verified publisher (or verified email) for both package owners.
-- [ ] Enable GitHub Actions OIDC automated publishing (`v{{version}}` tag pattern) in `pub.dev/packages/trpc_dart/admin` and `pub.dev/packages/trpc_flutter/admin`.
-- [ ] Run `node scripts/prepare-publish.mjs` to strip local-only markers and set hosted constraints, then publish `trpc_dart` followed by `trpc_flutter` to register both on pub.dev (or let the tag-triggered workflow handle it).
-- [ ] Merge the `release/v0.1.0` PR after the CI workflow passes, tag `v0.1.0`, and verify the release workflow publishes all 6 packages.
-- [ ] Post-release: verify npm provenance on `npmjs.com/package/@rpc-dart/cli`, confirm pub.dev scoring on both packages, and update the README badges.
+- [x] Create the `@rpc-dart` organization on npmjs.com (granular access token with `Read and write (publish and stage)` + `Bypass 2FA` enabled).
+- [x] Save the npm token as `NPM_TOKEN` in GitHub Actions repository secrets and configure OIDC provenance (`--provenance`).
+- [x] Create accounts on pub.dev with a verified publisher (or verified email) for both package owners.
+- [x] Enable GitHub Actions OIDC automated publishing (`v{{version}}` tag pattern) in `pub.dev/packages/trpc_dart/admin` and `pub.dev/packages/trpc_flutter/admin`.
+- [x] Implement `pubspec_overrides.yaml` for local Dart workspace resolution and update `scripts/prepare-publish.mjs` + `scripts/audit-release.mjs` for clean standalone publishing.
+- [x] Merge release PRs after CI passes, tag `v0.1.0` through `v0.1.3`, and verify the idempotent release workflow publishes all 6 packages (`rpc-dart`, `@rpc-dart/core`, `@rpc-dart/trpc-adapter`, `@rpc-dart/dart-generator`, `trpc_dart`, `trpc_flutter`).
+- [x] Post-release: verify npm provenance on `npmjs.com/package/rpc-dart` and `@rpc-dart/*`, confirm **160 / 160** `pana` / pub.dev scoring and 100% `dart doc` compliance on both Dart packages, and update all package READMEs with absolute GitHub URLs and registry badges.
+- [x] Configure active GitHub Repository Rulesets protecting `main` (required `verify` CI check, linear history, auto-delete merged branches) and `refs/tags/v*` release tags.
 
-## Shipped & verified in v0.1.0
+## Shipped & verified in v0.1.0 – v0.1.3
 
 - [x] TypeScript extractor: route discovery probe + public-inference ts harness (`inferRouterInputs` / `inferRouterOutputs` per-path aliases)
 - [x] Contract IR v1: normalized type registry, canonical JSON serialization, SHA-256 content hash
@@ -25,17 +26,20 @@ Project tracker for shipped milestones and upcoming engineering work. Contributi
 - [x] All 7 CLI commands (`generate`, `watch`, `check`, `diff`, `clean`, `doctor`, `init`) with zero-config auto-discovery and multi-project support
 - [x] Fastify + Flutter end-to-end suite over the real wire (batching, SuperJSON, typed errors, invalidation)
 - [x] Zero-cast `RpcJson` decoding with field breadcrumb paths and int → double coercion
-- [x] Website-structured documentation suite and release audit tooling
+- [x] Website-structured documentation suite, comprehensive package-level READMEs, and 7-gate release audit tooling
 
 ## Milestone v0.2.0 — Real-time subscriptions & streaming
 
-- [ ] SSE link compatible with tRPC v11 `httpSubscriptionLink` (connect / data / ping / resume frames)
-- [ ] WebSocket link compatible with tRPC v11 `wsLink` (subscription.start / stop / reconnect notifications)
-- [ ] Generator emits `.subscribe(input)` returning `Stream<T>` on subscription procedures
-- [ ] Auto-reconnect with exponential backoff + jitter, driven by the shared retry policy
-- [ ] Auth token refresh on stream reconnect (single-flight, then re-subscribe)
-- [ ] Wire conformance fixtures for both transports against the pinned example server
-- [ ] Documentation: subscriptions guide with backpressure and cancellation recipes
+- [ ] TypeScript subscription extraction: unwrap tRPC v11 async generator (`AsyncGenerator` / `AsyncIterable`), `tracked(id, data)` envelopes, and `observable` outputs into Contract IR
+- [ ] SSE link (`HttpSubscriptionLink`) compatible with tRPC v11 `httpSubscriptionLink` (connect / data / ping / serialized-error / `lastEventId` resume frames)
+- [ ] WebSocket link (`WsSubscriptionLink`) compatible with tRPC v11 `wsLink` (multiplexed `subscription.start` / `subscription.stop` / `reconnect` notifications)
+- [ ] `SplitLink` (operation-type router link) to route `query` / `mutation` to `HttpBatchLink` and `subscription` to SSE or WebSocket links seamlessly
+- [ ] Generator emits `.subscribe(input, {options, lastEventId})` returning `Stream<T>` on subscription procedures with zero-cast `RpcJson` decoding
+- [ ] Auto-reconnect with exponential backoff + jitter, driven by the shared retry policy, while preserving the latest tracked event ID (`lastEventId`)
+- [ ] Auth token refresh on stream reconnect (single-flight via `AuthLink`, then re-subscribe with updated headers/connectionParams)
+- [ ] Flutter reactive stream bridge in `trpc_flutter` (`RpcStreamState<T>` + `ValueListenable` / cache invalidation hook on incoming stream events)
+- [ ] Wire conformance fixtures for both SSE and WebSocket transports against the pinned Fastify example server
+- [ ] Documentation: subscriptions guide (`docs/guides/subscriptions.md`) with SSE vs WebSocket setup, `tracked()` resume, backpressure, and cancellation recipes
 
 ## Milestone v0.3.0 — oRPC adapter & binary/multipart transfers
 
@@ -49,7 +53,7 @@ Project tracker for shipped milestones and upcoming engineering work. Contributi
 
 ## Milestone v0.4.0 — Developer tooling & ecosystem
 
-- [ ] Flutter DevTools extension: network inspector for batched requests, query cache tree, invalidation timeline
+- [ ] Flutter DevTools extension: network inspector for batched requests, active subscriptions, query cache tree, invalidation timeline
 - [ ] VS Code / Cursor problem matcher wiring for `RPCDART0xxx` diagnostics in the Problems panel
 - [ ] Published convenience adapters: `trpc_flutter_bloc`, `trpc_flutter_riverpod` (thin wrappers over the existing guides)
 - [ ] Persistent query cache storage interface with pluggable backends

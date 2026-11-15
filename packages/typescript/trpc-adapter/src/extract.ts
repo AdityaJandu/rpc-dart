@@ -52,15 +52,8 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
     throw new ExtractionFailure(diagnostics);
   }
 
-  // 2. Virtual harness over the public inference utilities, one alias pair per path.
-  const harnessPath = path.join(tsconfigDir, harnessFileName());
-  const harnessSource = buildHarness(
-    entryImportPath(tsconfigDir, entryAbsolute),
-    options.exportName,
-    probePaths.map((p) => p.path),
-  );
-
-  // 3. Program under the user's own tsconfig, harness overlaid in memory.
+  // 2. Program options from the user's own tsconfig (parsed before the harness
+  //    is built so Node16/NodeNext resolution can shape the entry specifier).
   const configFile = ts.readConfigFile(options.tsconfigPath, ts.sys.readFile);
   if (configFile.error) {
     diagnostics.push({
@@ -73,11 +66,45 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
     throw new ExtractionFailure(diagnostics);
   }
   const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, tsconfigDir);
-  const baseHost = ts.createCompilerHost(parsed.options, true);
+
+  // 3. Virtual harness over the public inference utilities, one alias pair per path.
+  const resolution =
+    parsed.options.moduleResolution === ts.ModuleResolutionKind.Node16
+      ? ('node16' as const)
+      : parsed.options.moduleResolution === ts.ModuleResolutionKind.NodeNext
+        ? ('nodenext' as const)
+        : undefined;
+  const harnessPath = path.join(tsconfigDir, harnessFileName());
+  const harnessSource = buildHarness(
+    entryImportPath(tsconfigDir, entryAbsolute, resolution),
+    options.exportName,
+    probePaths.map((p) => p.path),
+  );
+
+  // 4. Program under the user's own tsconfig, harness overlaid in memory.
+  //    Extraction-neutral overrides: the in-memory program exists only to
+  //    answer type queries on the harness, so build/lint-only flags are
+  //    neutralized regardless of the user's tsconfig — they would otherwise
+  //    reject the synthetic harness (rootDir, composite emit rules) or surface
+  //    lint-only semantic errors (noUnusedLocals/noUnusedParameters,
+  //    isolatedDeclarations) that have nothing to do with contract extraction.
+  const extractionOptions: ts.CompilerOptions = {
+    ...parsed.options,
+    noEmit: true,
+    declaration: false,
+    declarationMap: false,
+    composite: false,
+    incremental: false,
+    isolatedDeclarations: false,
+    noUnusedLocals: false,
+    noUnusedParameters: false,
+    rootDir: undefined,
+  };
+  const baseHost = ts.createCompilerHost(extractionOptions, true);
   const host = overlayHost(baseHost, harnessPath, harnessSource);
   const program = ts.createProgram({
     rootNames: [harnessPath, ...parsed.fileNames],
-    options: parsed.options,
+    options: extractionOptions,
     host,
   });
 

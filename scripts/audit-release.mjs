@@ -43,7 +43,7 @@ check('version-lockstep', () => {
   if (all.some((v) => v !== all[0])) {
     throw new Error(`versions differ: npm [${npm.join(', ')}] dart [${dart.join(', ')}]`);
   }
-  if (all[0] !== '0.1.0') throw new Error(`expected 0.1.0, got ${all[0]}`);
+  if (all[0] !== '0.1.1') throw new Error(`expected 0.1.1, got ${all[0]}`);
   return `all 6 packages at ${all[0]}`;
 });
 

@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const PACKAGES = ['trpc_dart', 'trpc_flutter'];
 const restore = process.argv.includes('--restore');
 

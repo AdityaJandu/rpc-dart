@@ -28,7 +28,7 @@ export interface EmitResult {
 
 const RUNTIME_PACKAGE = 'trpc_dart';
 
-const GENERATOR_VERSION = '0.1.0';
+const GENERATOR_VERSION = '0.1.1';
 const MODEL_DIR = 'lib/src/api/models';
 const PROC_DIR = 'lib/src/api/procedures';
 const ROUTER_DIR = 'lib/src/api/routers';

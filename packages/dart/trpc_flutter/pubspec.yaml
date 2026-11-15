@@ -1,6 +1,6 @@
 name: trpc_flutter
 description: Flutter bridge for trpc_dart - ValueListenable over cache-backed queries.
-version: 0.1.0
+version: 0.1.1
 publish_to: none
 homepage: https://github.com/rpc-dart/rpc-dart
 repository: https://github.com/rpc-dart/rpc-dart

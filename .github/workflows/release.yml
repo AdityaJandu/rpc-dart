@@ -40,12 +40,12 @@ jobs:
 
       - name: Publish to npm with provenance (idempotent)
         run: |
+          VER=$(node -p "require('./packages/typescript/core/package.json').version")
           for pkg in "@rpc-dart/core" "@rpc-dart/trpc-adapter" "@rpc-dart/dart-generator" "rpc-dart"; do
-            ver=$(node -p "require('./packages/typescript/${pkg === 'rpc-dart' ? 'cli' : pkg.split('/')[1]}/package.json').version")
-            if npm view "${pkg}@${ver}" version >/dev/null 2>&1; then
-              echo "✓ ${pkg}@${ver} is already published on npm — skipping"
+            if npm view "${pkg}@${VER}" version >/dev/null 2>&1; then
+              echo "✓ ${pkg}@${VER} is already published on npm — skipping"
             else
-              echo "Publishing ${pkg}@${ver}..."
+              echo "Publishing ${pkg}@${VER}..."
               pnpm --filter "${pkg}" publish --access public --no-git-checks --provenance
             fi
           done
@@ -90,11 +90,18 @@ jobs:
             echo "✓ trpc_dart@${VER} is already published on pub.dev — skipping"
           else
             (cd packages/dart/trpc_dart && dart pub get && dart pub publish --force)
-            sleep 25
           fi
 
           if curl -fsSL "https://pub.dev/api/packages/trpc_flutter/versions/${VER}" >/dev/null 2>&1; then
             echo "✓ trpc_flutter@${VER} is already published on pub.dev — skipping"
           else
-            (cd packages/dart/trpc_flutter && flutter pub get && dart pub publish --force)
+            cd packages/dart/trpc_flutter
+            for attempt in $(seq 1 24); do
+              if flutter pub get; then
+                break
+              fi
+              echo "Waiting for trpc_dart@${VER} to propagate on pub.dev CDN (attempt ${attempt}/24)..."
+              sleep 10
+            done
+            dart pub publish --force
           fi

@@ -2,7 +2,7 @@ import { createJiti } from 'jiti';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const here = '/Users/adityajandu/Coding/rpc-dart/tests/e2e/src';
+const here = fileURLToPath(new URL('../../../tests/e2e/src', import.meta.url));
 const jiti = createJiti(path.join(here, 'fixture-server.ts'));
 const mod = await jiti.import(path.join(here, 'fixture-server.ts'));
 const server = await mod.startFixtureServer();

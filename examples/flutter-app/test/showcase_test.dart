@@ -17,9 +17,9 @@ void main() {
   late Api api;
 
   setUpAll(() async {
-    final script = Uri.file('/Users/adityajandu/Coding/rpc-dart/examples/trpc-fastify/scripts/server-child.mjs');
+    final script = Directory.current.uri.resolve('../trpc-fastify/scripts/server-child.mjs');
     server = await Process.start('node', [script.toFilePath()],
-        workingDirectory: '/Users/adityajandu/Coding/rpc-dart/examples/trpc-fastify');
+        workingDirectory: Directory.current.uri.resolve('../trpc-fastify').toFilePath());
     final ready = Completer<int>();
     server.stdout
         .transform(const SystemEncoding().decoder)

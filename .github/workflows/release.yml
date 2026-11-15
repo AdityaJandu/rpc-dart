@@ -40,8 +40,8 @@ jobs:
           pnpm install --frozen-lockfile
           (cd packages/dart/trpc_dart && dart pub get)
           (cd packages/dart/trpc_flutter && flutter pub get)
-          pnpm -r typecheck
           pnpm -r build
+          pnpm -r typecheck
           pnpm run audit:release
 
       - name: Publish @rpc-dart/core

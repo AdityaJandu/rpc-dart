@@ -38,8 +38,8 @@ jobs:
 
       - name: TypeScript typecheck & build
         run: |
-          pnpm -r typecheck
           pnpm -r build
+          pnpm -r typecheck
 
       - name: TypeScript & E2E test suites
         run: pnpm -r test

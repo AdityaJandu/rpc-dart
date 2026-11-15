@@ -40,10 +40,10 @@ ${aliases}
 }
 
 /**
- * './router.ts' -> './router' (bundler-style), or './router.js' under
+ * './router.ts' -> './router' (bundler-style), or explicit extensions under
  * node16/nodenext resolution, where extensionless relative imports are
- * illegal (TS5097) and the TS-standard '.js' specifier resolves to the .ts
- * source with or without allowImportingTsExtensions.
+ * illegal (TS5097) and the TS-standard specifiers (.js/.mjs/.cjs) resolve to
+ * the .ts/.mts/.cts sources with or without allowImportingTsExtensions.
  */
 export function entryImportPath(
   tsconfigDir: string,
@@ -51,7 +51,14 @@ export function entryImportPath(
   resolution?: 'node16' | 'nodenext',
 ): string {
   const rel = relative(tsconfigDir, entryAbsolute);
-  const specifier = resolution === undefined ? rel.replace(/\.ts$/, '') : rel.replace(/\.ts$/, '.js');
+  const specifier =
+    resolution === undefined
+      ? rel.replace(/\.(mts|cts|tsx?)$/, '')
+      : rel
+          .replace(/\.tsx$/, '.js')
+          .replace(/\.mts$/, '.mjs')
+          .replace(/\.cts$/, '.cjs')
+          .replace(/\.ts$/, '.js');
   return specifier.startsWith('.') ? specifier : `./${specifier}`;
 }
 

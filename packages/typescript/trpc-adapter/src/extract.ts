@@ -82,11 +82,29 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
   );
 
   // 4. Program under the user's own tsconfig, harness overlaid in memory.
-  const baseHost = ts.createCompilerHost(parsed.options, true);
+  //    Extraction-neutral overrides: the in-memory program exists only to
+  //    answer type queries on the harness, so build/lint-only flags are
+  //    neutralized regardless of the user's tsconfig — they would otherwise
+  //    reject the synthetic harness (rootDir, composite emit rules) or surface
+  //    lint-only semantic errors (noUnusedLocals/noUnusedParameters,
+  //    isolatedDeclarations) that have nothing to do with contract extraction.
+  const extractionOptions: ts.CompilerOptions = {
+    ...parsed.options,
+    noEmit: true,
+    declaration: false,
+    declarationMap: false,
+    composite: false,
+    incremental: false,
+    isolatedDeclarations: false,
+    noUnusedLocals: false,
+    noUnusedParameters: false,
+    rootDir: undefined,
+  };
+  const baseHost = ts.createCompilerHost(extractionOptions, true);
   const host = overlayHost(baseHost, harnessPath, harnessSource);
   const program = ts.createProgram({
     rootNames: [harnessPath, ...parsed.fileNames],
-    options: parsed.options,
+    options: extractionOptions,
     host,
   });
 

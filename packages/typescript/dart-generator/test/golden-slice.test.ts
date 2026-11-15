@@ -1,3 +1,4 @@
+import dartGenPkg from '../package.json' with { type: 'json' };
 import { beforeAll, describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { extractContract } from '@rpc-dart/trpc-adapter';
@@ -50,7 +51,7 @@ describe('dart emitter (slice goldens)', () => {
     const { files } = emit(ir);
     const manifest = JSON.parse(files['lib/src/api/generated.rpc-dart.json']!);
     expect(manifest.irHash).toBe(ir.hash);
-    expect(manifest.generatorVersion).toBe('0.1.0');
+    expect(manifest.generatorVersion).toBe(dartGenPkg.version);
     expect(manifest.protocol).toEqual({ kind: 'trpc', version: '11', transformer: 'superjson' });
     const listed = (manifest.files as Array<{ path: string }>).map((f) => f.path).sort();
     expect(listed).toEqual(

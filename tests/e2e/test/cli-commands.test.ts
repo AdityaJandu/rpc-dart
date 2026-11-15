@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -28,7 +29,7 @@ const generateOptions = () => ({
 });
 
 beforeAll(async () => {
-  workspace = mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/cli-'));
+  workspace = (() => { fs.mkdirSync(path.join(REPO_ROOT, 'tests/e2e/.tmp'), { recursive: true }); return mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/cli-')); })();
   fixtureDir = path.join(workspace, 'trpc');
   outDir = path.join(workspace, 'consumer/lib/src/api');
   cpSync(FIXTURE_SRC, fixtureDir, { recursive: true });
@@ -36,7 +37,7 @@ beforeAll(async () => {
 }, 30000);
 
 afterAll(() => {
-  rmSync(workspace, { recursive: true, force: true });
+  if (workspace) rmSync(workspace, { recursive: true, force: true });
 });
 
 describe('rpc-dart check', () => {
@@ -229,7 +230,7 @@ describe('zero-config CLI experience', () => {
   }
 
   it('generate with zero flags uses rpc-dart.config.json', async () => {
-    const ws = mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/zerocfg-'));
+    const ws = (() => { fs.mkdirSync(path.join(REPO_ROOT, 'tests/e2e/.tmp'), { recursive: true }); return mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/zerocfg-')); })();
     cpSync(FIXTURE_SRC, path.join(ws, 'trpc'), { recursive: true });
     mkdirSync(path.join(ws, 'out'), { recursive: true });
     writeFileSync(
@@ -248,7 +249,7 @@ describe('zero-config CLI experience', () => {
   });
 
   it('flags override config values', async () => {
-    const ws = mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/zerocfg2-'));
+    const ws = (() => { fs.mkdirSync(path.join(REPO_ROOT, 'tests/e2e/.tmp'), { recursive: true }); return mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/zerocfg2-')); })();
     cpSync(FIXTURE_SRC, path.join(ws, 'trpc'), { recursive: true });
     writeFileSync(
       path.join(ws, 'rpc-dart.config.json'),
@@ -267,7 +268,7 @@ describe('zero-config CLI experience', () => {
   });
 
   it('multi-project config generates every target', async () => {
-    const ws = mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/zerocfg3-'));
+    const ws = (() => { fs.mkdirSync(path.join(REPO_ROOT, 'tests/e2e/.tmp'), { recursive: true }); return mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/zerocfg3-')); })();
     cpSync(FIXTURE_SRC, path.join(ws, 'trpc'), { recursive: true });
     writeFileSync(
       path.join(ws, 'rpc-dart.config.json'),
@@ -286,7 +287,7 @@ describe('zero-config CLI experience', () => {
   });
 
   it('no config + no flags prints an actionable hint and exits 2', () => {
-    const ws = mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/zerocfg4-'));
+    const ws = (() => { fs.mkdirSync(path.join(REPO_ROOT, 'tests/e2e/.tmp'), { recursive: true }); return mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/zerocfg4-')); })();
     const result = runCli(['generate'], ws);
     expect(result.status).toBe(2);
     expect(result.output).toContain('rpc-dart init');

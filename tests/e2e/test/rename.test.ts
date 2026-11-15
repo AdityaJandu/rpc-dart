@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -39,7 +40,7 @@ function runDart(args: string[], cwd: string): { status: number; output: string 
 describe('renaming a procedure breaks the consumer at compile time', () => {
   it('removes stale bindings and makes stale call sites fail dart analyze', async () => {
     mkdirSync(path.join(REPO_ROOT, 'tests/e2e/.tmp'), { recursive: true });
-    const workspace = mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/rename-'));
+    const workspace = (() => { fs.mkdirSync(path.join(REPO_ROOT, 'tests/e2e/.tmp'), { recursive: true }); return mkdtempSync(path.join(REPO_ROOT, 'tests/e2e/.tmp/rename-')); })();
     const fixtureDir = path.join(workspace, 'trpc');
     const consumerDir = path.join(workspace, 'consumer');
     const apiDir = path.join(consumerDir, 'lib', 'src', 'api');
@@ -141,7 +142,7 @@ Future<void> main() async {
       const healed = runDart(['analyze', '--fatal-infos', '--fatal-warnings', '.'], consumerDir);
       expect(healed.status, `expected clean analyze after healing call sites:\n${healed.output}`).toBe(0);
     } finally {
-      rmSync(workspace, { recursive: true, force: true });
+      if (workspace) rmSync(workspace, { recursive: true, force: true });
     }
   }, 180000);
 });

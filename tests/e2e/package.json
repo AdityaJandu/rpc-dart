@@ -1,0 +1,27 @@
+{
+  "name": "@rpc-dart/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "rpc-dart": "workspace:*",
+    "@trpc/server": "^11.28.0",
+    "fastify": "^5.0.0",
+    "superjson": "^2.2.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@trpc/server": "^11.28.0",
+    "fastify": "^5.0.0",
+    "jiti": "^2.6.0",
+    "superjson": "^2.2.3",
+    "zod": "^3.25.76",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "@types/node": "^24.0.0"
+  }
+}

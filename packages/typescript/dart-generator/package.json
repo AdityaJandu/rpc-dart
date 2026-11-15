@@ -1,0 +1,35 @@
+{
+  "name": "@rpc-dart/dart-generator",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@rpc-dart/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "@rpc-dart/trpc-adapter": "workspace:*",
+    "@types/node": "^24.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rpc-dart/rpc-dart.git"
+  },
+  "homepage": "https://github.com/rpc-dart/rpc-dart#readme",
+  "keywords": [
+    "dart",
+    "code-generation",
+    "flutter"
+  ]
+}

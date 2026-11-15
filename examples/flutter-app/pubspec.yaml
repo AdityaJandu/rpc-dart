@@ -1,0 +1,16 @@
+name: example_flutter_app
+description: Full-stack showcase consuming generated trpc_dart bindings.
+publish_to: none
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  trpc_dart:
+    path: ../../packages/dart/trpc_dart
+  trpc_flutter:
+    path: ../../packages/dart/trpc_flutter
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^5.0.0

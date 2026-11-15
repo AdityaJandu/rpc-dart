@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Ensure latest npm CLI for OIDC Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Setup Flutter & Dart SDK (required for E2E tests & audit)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies, build & audit
+        run: |
+          pnpm install --frozen-lockfile
+          (cd packages/dart/trpc_dart && dart pub get)
+          (cd packages/dart/trpc_flutter && flutter pub get)
+          pnpm -r build
+          pnpm -r typecheck
+          pnpm run audit:release
+
+      - name: Publish @rpc-dart/core
+        run: pnpm --filter @rpc-dart/core publish --access public --no-git-checks --provenance
+
+      - name: Publish @rpc-dart/trpc-adapter
+        run: pnpm --filter @rpc-dart/trpc-adapter publish --access public --no-git-checks --provenance
+
+      - name: Publish @rpc-dart/dart-generator
+        run: pnpm --filter @rpc-dart/dart-generator publish --access public --no-git-checks --provenance
+
+      - name: Publish rpc-dart CLI
+        run: pnpm --filter rpc-dart publish --access public --no-git-checks --provenance
+
+  publish-pub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Dart OIDC credentials for pub.dev
+        uses: dart-lang/setup-dart@v1
+
+      - name: Prepare pubspec.yaml files for release
+        run: node scripts/prepare-publish.mjs
+
+      - name: Publish trpc_dart to pub.dev
+        working-directory: packages/dart/trpc_dart
+        run: dart pub publish --force
+
+      - name: Wait for pub.dev to index trpc_dart
+        run: sleep 25
+
+      - name: Publish trpc_flutter to pub.dev
+        working-directory: packages/dart/trpc_flutter
+        run: flutter pub publish --force

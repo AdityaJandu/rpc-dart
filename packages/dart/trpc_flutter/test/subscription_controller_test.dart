@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:trpc_dart/trpc_dart.dart';
 import 'package:trpc_flutter/trpc_flutter.dart';

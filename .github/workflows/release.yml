@@ -58,14 +58,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
 
       - name: Setup Flutter & Dart
         uses: subosito/flutter-action@v2
@@ -104,5 +100,6 @@ jobs:
               echo "Waiting for trpc_dart@${VER} to propagate on pub.dev CDN (attempt ${attempt}/24)..."
               sleep 10
             done
+            git checkout -- analysis_options.yaml 2>/dev/null || true
             dart pub publish --force
           fi

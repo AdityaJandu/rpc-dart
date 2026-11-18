@@ -30,16 +30,18 @@ Project tracker for shipped milestones and upcoming engineering work. Contributi
 
 ## Milestone v0.2.0 — Real-time subscriptions & streaming
 
-- [ ] TypeScript subscription extraction: unwrap tRPC v11 async generator (`AsyncGenerator` / `AsyncIterable`), `tracked(id, data)` envelopes, and `observable` outputs into Contract IR
-- [ ] SSE link (`HttpSubscriptionLink`) compatible with tRPC v11 `httpSubscriptionLink` (connect / data / ping / serialized-error / `lastEventId` resume frames)
-- [ ] WebSocket link (`WsSubscriptionLink`) compatible with tRPC v11 `wsLink` (multiplexed `subscription.start` / `subscription.stop` / `reconnect` notifications)
-- [ ] `SplitLink` (operation-type router link) to route `query` / `mutation` to `HttpBatchLink` and `subscription` to SSE or WebSocket links seamlessly
-- [ ] Generator emits `.subscribe(input, {options, lastEventId})` returning `Stream<T>` on subscription procedures with zero-cast `RpcJson` decoding
-- [ ] Auto-reconnect with exponential backoff + jitter, driven by the shared retry policy, while preserving the latest tracked event ID (`lastEventId`)
-- [ ] Auth token refresh on stream reconnect (single-flight via `AuthLink`, then re-subscribe with updated headers/connectionParams)
-- [ ] Flutter reactive stream bridge in `trpc_flutter` (`RpcStreamState<T>` + `ValueListenable` / cache invalidation hook on incoming stream events)
-- [ ] Wire conformance fixtures for both SSE and WebSocket transports against the pinned Fastify example server
-- [ ] Documentation: subscriptions guide (`docs/guides/subscriptions.md`) with SSE vs WebSocket setup, `tracked()` resume, backpressure, and cancellation recipes
+- [x] TypeScript subscription extraction: unwrap tRPC v11 async generator (`AsyncGenerator` / `AsyncIterable`), `tracked(id, data)` envelopes, and `observable` outputs into Contract IR
+- [x] SSE link (`HttpSubscriptionLink`) compatible with tRPC v11 `httpSubscriptionLink` (connect / data / ping / serialized-error / normal return completion / `lastEventId` resume frames)
+- [x] WebSocket link (`WsSubscriptionLink`) compatible with tRPC v11 `wsLink` (multiplexed `subscription.start` / `subscription.stop` / `reconnect` notifications / dynamic `connectionParams`)
+- [x] `SplitLink` (operation-type router link) to route `query` / `mutation` to `HttpBatchLink` and `subscription` to SSE or WebSocket links seamlessly
+- [x] Generator emits `.subscribe(input, {options})` returning `Stream<T>` on subscription procedures with zero-cast `RpcJson` decoding
+- [x] Auto-reconnect with exponential backoff + jitter, driven by the shared retry policy, while preserving the latest tracked event ID (`lastEventId`) and stopping cleanly on normal server completion
+- [x] Auth token refresh on stream reconnect (single-flight via `AuthLink`, then re-subscribe with updated headers/`connectionParams`)
+- [x] Flutter reactive stream bridge in `trpc_flutter` (`RpcSubscriptionState<T>` + `RpcSubscriptionController<T>` `ValueListenable` + `RpcQueryCache` invalidation hook on incoming stream events)
+- [x] End-to-end showcase in `examples/trpc-fastify` and `examples/flutter-app` (live SSE & WebSocket subscriptions, `tracked()` resume demo, and stream-driven query cache invalidation UI)
+- [x] Wire conformance fixtures for both SSE and WebSocket transports against the pinned Fastify example server in `tests/e2e`
+- [x] Documentation: subscriptions guide (`docs/guides/subscriptions.md`) with SSE vs WebSocket setup, `tracked()` resume, backpressure, and cancellation recipes
+
 
 ## Milestone v0.3.0 — oRPC adapter & binary/multipart transfers
 

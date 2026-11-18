@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Emits `.subscribe(...)` methods on subscription procedures returning `Stream<T>` with zero-cast stream-item decoding (model `fromJson` closures and `RpcJson` tearoffs for primitives).
+- Generated input models imported for with-input subscriptions; `dart format`-clean output.
+- Emits bindings stamped with generator version 0.2.0.
+
 ## 0.1.4
 
 - Emits bindings stamped with generator version 0.1.4.

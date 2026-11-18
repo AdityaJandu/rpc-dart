@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Subscription extraction: unwraps tRPC v11 async generators, `tracked()` envelopes, and observables down to the streamed item type; emits `supportsLastEventId` procedure metadata.
+- New subscription extraction fixture coverage across async generator, tracked, observable, and never-yield shapes.
+
 ## 0.1.4
 
 - Full `tsconfig.json` independence in type extraction: projects using `moduleResolution: node16` / `nodenext` extract correctly, with the harness emitting explicit `.js` / `.mjs` / `.cjs` entry specifiers (including `.tsx`).

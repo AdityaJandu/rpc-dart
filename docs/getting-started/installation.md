@@ -28,8 +28,8 @@ npx rpc-dart watch                  # incremental regeneration next to your dev 
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.1.4          # pure Dart runtime (web-safe, no Flutter required)
-  trpc_flutter: ^0.1.4       # optional: ValueListenable bridge for widget trees
+  trpc_dart: ^0.2.0          # pure Dart runtime (web-safe, no Flutter required)
+  trpc_flutter: ^0.2.0       # optional: ValueListenable bridge for widget trees
 ```
 
 ## Configuration

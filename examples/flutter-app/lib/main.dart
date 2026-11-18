@@ -306,6 +306,45 @@ class _ShowcasePageState extends State<ShowcasePage> {
                     onTap: _loadingMore ? () {} : () => _loadPosts(),
                   ),
                 ),
+
+              // --- Live streams ---
+              const _SectionHeader('Live streams'),
+              LiveStreamPanel(
+                title: 'server tick',
+                streamFactory: ({lastEventId, onReconnect}) =>
+                    api.streams.onServerTick
+                        .subscribe(
+                  options: RpcSubscriptionOptions(onReconnect: onReconnect),
+                )
+                        .map((event) {
+                  return <String, Object?>{
+                    'tick': event.tick,
+                    'memoryMB': event.memoryBytes.toDouble() / 1024 / 1024,
+                  };
+                }),
+                describe: (data) =>
+                    'tick ${data['tick']} · heap ${(data['memoryMB'] as double).toStringAsFixed(1)} MB',
+              ),
+              LiveStreamPanel(
+                title: 'activity feed',
+                streamFactory: ({lastEventId, onReconnect}) =>
+                    api.streams.onActivityFeed
+                        .subscribe(
+                          StreamsOnActivityFeedInput(
+                            lastEventId: lastEventId == null
+                                ? null
+                                : RpcPresent(lastEventId),
+                          ),
+                          options: RpcSubscriptionOptions(
+                            lastEventId: lastEventId,
+                            onReconnect: onReconnect,
+                          ),
+                        )
+                        .map((event) => <String, Object?>{
+                              'message': event.message,
+                            }),
+                describe: (data) => '${data['message']}',
+              ),
             ],
           ),
         ),
@@ -523,6 +562,129 @@ class _PostTile extends StatelessWidget {
             child: Text(
               post.score.toStringAsFixed(1),
               style: const TextStyle(color: _accent, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Live subscription panel: binds a generated `.subscribe()` stream through
+/// [RpcSubscriptionController] and renders status + latest event.
+class LiveStreamPanel extends StatefulWidget {
+  const LiveStreamPanel({
+    super.key,
+    required this.title,
+    required this.streamFactory,
+    required this.describe,
+  });
+
+  final String title;
+  final Stream<Map<String, Object?>> Function({
+    String? lastEventId,
+    void Function(int attempt, Object? error)? onReconnect,
+  }) streamFactory;
+  final String Function(Map<String, Object?> data) describe;
+
+  @override
+  State<LiveStreamPanel> createState() => _LiveStreamPanelState();
+}
+
+class _LiveStreamPanelState extends State<LiveStreamPanel> {
+  late final RpcSubscriptionController<Map<String, Object?>> _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = RpcSubscriptionController<Map<String, Object?>>(
+      streamFactory: ({lastEventId, onReconnect}) => widget.streamFactory(
+        lastEventId: lastEventId,
+        onReconnect: onReconnect,
+      ),
+    )..start();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<RpcSubscriptionState<Map<String, Object?>>>(
+      valueListenable: _controller,
+      builder: (context, state, _) {
+        final statusColor = switch (state.status) {
+          RpcSubscriptionStatus.active => _ok,
+          RpcSubscriptionStatus.error => _err,
+          RpcSubscriptionStatus.done => _dim,
+          _ => _accent,
+        };
+        final detail = switch (state.status) {
+          RpcSubscriptionStatus.active when state.hasData =>
+            widget.describe(state.data!),
+          RpcSubscriptionStatus.reconnecting => 'reconnecting...',
+          RpcSubscriptionStatus.error => 'error: ${state.error?.message}',
+          RpcSubscriptionStatus.done => 'stream completed',
+          _ => 'connecting...',
+        };
+        return _PostTileLike(
+          title: widget.title,
+          subtitle: detail,
+          statusColor: statusColor,
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+
+/// Reuses the post-tile look for stream status rows.
+class _PostTileLike extends StatelessWidget {
+  const _PostTileLike({
+    required this.title,
+    required this.subtitle,
+    required this.statusColor,
+  });
+
+  final String title;
+  final String subtitle;
+  final Color statusColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: statusColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: _fg, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: _dim, fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],

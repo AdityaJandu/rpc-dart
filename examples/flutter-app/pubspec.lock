@@ -198,14 +198,14 @@ packages:
       path: "../../packages/dart/trpc_dart"
       relative: true
     source: path
-    version: "0.1.3"
+    version: "0.2.0"
   trpc_flutter:
     dependency: "direct main"
     description:
       path: "../../packages/dart/trpc_flutter"
       relative: true
     source: path
-    version: "0.1.3"
+    version: "0.2.0"
   typed_data:
     dependency: transitive
     description:

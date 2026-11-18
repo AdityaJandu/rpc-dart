@@ -17,6 +17,7 @@ TypeScript router ──► rpc-dart CLI ──► generated Dart bindings ─�
 - **Three-state PATCH semantics.** `RpcOpt<T>` distinguishes an omitted key, an explicit `null`, and a value — no silent merge bugs on partial updates.
 - **Unknown-safe enums and unions.** Server-side enum additions decode to `$unknown` sentinels instead of crashing the app; discriminated unions become sealed Dart classes.
 - **State-management agnostic.** Direct calls (`.query()`, `.mutate()`, `.safeQuery()`, `.safeMutate()`), structural query keys, a zero-dependency `RpcQueryCache` with invalidation streams and `.watch()`, and a native Flutter `ValueListenable` bridge. Works with `setState`, BLoC, Provider, Riverpod, or nothing at all.
+- **Real-time subscriptions.** Generated `.subscribe()` streams over SSE or WebSocket with `tracked()` resume, exponential-backoff reconnect, and single-flight auth refresh (`HttpSubscriptionLink`, `WsSubscriptionLink`, `SplitLink`).
 - **Composable middleware.** A link pipeline (`AuthLink`, `RetryLink`, `HttpBatchLink`, ...) with per-call context: headers, timeouts, cancellation, idempotency keys.
 - **Real protocol support.** HTTP batching with index-correlated responses, SuperJSON envelopes (`Date`, `BigInt`, `NaN`, ...), SSE subscriptions, the full tRPC error-code table as typed exceptions.
 
@@ -57,8 +58,8 @@ export { appRouter };
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.1.4          # pure Dart runtime (works on server, CLI, web, VM)
-  trpc_flutter: ^0.1.4       # optional: ValueListenable bridge for Flutter UIs
+  trpc_dart: ^0.2.0          # pure Dart runtime (works on server, CLI, web, VM)
+  trpc_flutter: ^0.2.0       # optional: ValueListenable bridge for Flutter UIs
 ```
 
 ```dart

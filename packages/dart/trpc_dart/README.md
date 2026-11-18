@@ -31,7 +31,7 @@ Add `trpc_dart` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.1.4
+  trpc_dart: ^0.2.0
 ```
 
 Then run:
@@ -214,3 +214,27 @@ If the server sends a number instead of a string, `RpcJson` throws `RpcDecodeExc
 ## License
 
 MIT © [Aditya Jandu](https://github.com/AdityaJandu)
+
+## Real-time subscriptions
+
+SSE and WebSocket transports with automatic reconnection and `tracked()` resume:
+
+```dart
+final client = RpcClient(
+  endpoint: Uri.parse('http://127.0.0.1:8787/trpc'),
+  links: [
+    SplitLink(
+      unaryLink: HttpBatchLink(endpoint: endpoint),
+      subscriptionLink: HttpSubscriptionLink(endpoint: endpoint),
+    ),
+  ],
+);
+
+final ticks = client.subscribe<Map<String, Object?>>(
+  path: 'streams.onServerTick',
+  input: null,
+  decode: (value) => value! as Map<String, Object?>,
+);
+```
+
+See [docs/guides/subscriptions.md](https://github.com/AdityaJandu/rpc-dart/blob/main/docs/guides/subscriptions.md) for the full guide.

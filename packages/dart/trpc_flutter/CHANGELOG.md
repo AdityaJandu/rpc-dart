@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- `RpcSubscriptionController<T>` + `RpcSubscriptionState<T>`: bind subscription streams to a `ValueListenable` with bounded history, status lifecycle, tracked-event id resume, and automatic query-cache prefix invalidation on incoming events.
+- `streamFactory` now receives an `onReconnect` hook to forward into `RpcSubscriptionOptions.onReconnect`; the controller transitions `connecting -> active -> reconnecting -> active`, preserving the last `data`, `history`, and `lastEventId` across a drop/reconnect cycle.
+- `trpc_dart` constraint raised to `^0.2.0`.
+
 ## 0.1.4
 
 - Synchronized v0.1.4 lockstep release; `trpc_dart` constraint raised to `^0.1.4`.

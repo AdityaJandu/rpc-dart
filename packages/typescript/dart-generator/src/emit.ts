@@ -28,7 +28,7 @@ export interface EmitResult {
 
 const RUNTIME_PACKAGE = 'trpc_dart';
 
-const GENERATOR_VERSION = '0.1.4';
+const GENERATOR_VERSION = '0.2.0';
 const MODEL_DIR = 'lib/src/api/models';
 const PROC_DIR = 'lib/src/api/procedures';
 const ROUTER_DIR = 'lib/src/api/routers';
@@ -94,6 +94,41 @@ function primitiveDart(primitive: string): string {
     default:
       return 'Object?';
   }
+}
+
+/** Zero-cast decoder expression for a stream item of [type]. */
+function decodeExprFor(em: Emitter, f: FileCtx, type: TypeRef): string {
+  if (isRef(type)) {
+    const name = namedName(defByRef(em, type));
+    f.modelNames.add(name);
+    f.trpcSymbols.add('RpcJson');
+    return `(value) => ${name}.fromJson(RpcJson.asMap(value, path))`;
+  }
+  if (typeof type === 'string') {
+    switch (type) {
+      case 'number':
+        f.trpcSymbols.add('RpcJson');
+        return 'RpcJson.asDouble';
+      case 'string':
+        f.trpcSymbols.add('RpcJson');
+        return 'RpcJson.asString';
+      case 'boolean':
+        f.trpcSymbols.add('RpcJson');
+        return 'RpcJson.asBool';
+      case 'Date':
+        f.trpcSymbols.add('RpcJson');
+        return 'RpcJson.asDateTime';
+      case 'BigInt':
+        f.trpcSymbols.add('RpcJson');
+        return 'RpcJson.asBigInt';
+      case 'void':
+      case 'never':
+        return "(value) => throw StateError('subscription never yields events')";
+      default:
+        return '(value) => value';
+    }
+  }
+  return '(value) => value';
 }
 
 function dartTypeOf(em: Emitter, f: FileCtx, type: TypeRef): string {
@@ -597,9 +632,41 @@ function renderProcedure(em: Emitter, path: string): FileCtx {
   const kind = record.kind;
   const hasInput = record.input !== null;
   const inputName = hasInput ? namedName(defByRef(em, record.input!)) : null;
-  const outputName = namedName(defByRef(em, record.output));
   const segments = path.split('.');
   const isQuery = kind === 'query';
+  const isSubscription = kind === 'subscription';
+
+  if (isSubscription) {
+    f.trpcSymbols.add('RpcSubscriptionOptions');
+    if (hasInput) f.modelNames.add(inputName!);
+    const elementDart = dartTypeOf(em, f, record.output);
+    add(f, `class ${procClassName(path)} {`);
+    add(f, `  const ${procClassName(path)}(this._client);`);
+    add(f);
+    add(f, '  final RpcClient _client;');
+    add(f);
+    add(f, `  static const path = '${path}';`);
+    add(f);
+    if (hasInput) {
+      add(f, `  Stream<${elementDart}> subscribe(${inputName} input, {RpcSubscriptionOptions? options}) {`);
+      add(f, `    return _client.subscribe<${elementDart}>(`);
+      add(f, '      path: path,');
+      add(f, '      input: input.toJson(),');
+    } else {
+      add(f, `  Stream<${elementDart}> subscribe({RpcSubscriptionOptions? options}) {`);
+      add(f, `    return _client.subscribe<${elementDart}>(`);
+      add(f, '      path: path,');
+      add(f, '      input: null,');
+    }
+    add(f, `      decode: ${decodeExprFor(em, f, record.output)},`);
+    add(f, '      options: options,');
+    add(f, '    );');
+    add(f, '  }');
+    add(f, '}');
+    return f;
+  }
+
+  const outputName = namedName(defByRef(em, record.output));
 
   if (hasInput) f.modelNames.add(inputName!);
   f.modelNames.add(outputName);

@@ -55,6 +55,62 @@ class AuthLink extends RpcLink {
     }
   }
 
+  /// Stream counterpart: same credential attach + single-flight refresh.
+  /// The replay re-opens the downstream stream, whose resume point rides the
+  /// subscription ticket's latest tracked event id. Controller-based so user
+  /// cancellation aborts the downstream immediately.
+  @override
+  Stream<Object?> invokeStream(RpcRequest request, RpcStreamLinkNext next) {
+    late final StreamController<Object?> out;
+    StreamSubscription<Object?>? current;
+    var replayed = false;
+    var cancelled = false;
+
+    Future<void> open() async {
+      final headers = await getHeaders();
+      if (cancelled) return;
+      late final StreamSubscription<Object?> sub;
+      sub = next(_attach(request, headers)).listen(
+        out.add,
+        onError: (Object error, StackTrace stackTrace) async {
+          // A superseded attempt's callbacks must not touch the output.
+          if (cancelled || out.isClosed || !identical(current, sub)) return;
+          if (error is! RpcUnauthorizedException || replayed) {
+            out.addError(error, stackTrace);
+            await out.close();
+            return;
+          }
+          // Detach before awaiting: the superseded attempt's onDone fires
+          // during the refresh and would otherwise close the output.
+          current = null;
+          final refreshed = await _refreshOnce();
+          if (!refreshed || cancelled) {
+            out.addError(error, stackTrace);
+            await out.close();
+            return;
+          }
+          replayed = true;
+          // Single replay: a second 401 propagates to the caller.
+          await open();
+        },
+        onDone: () async {
+          if (cancelled || !identical(current, sub)) return;
+          await out.close();
+        },
+      );
+      current = sub;
+    }
+
+    out = StreamController<Object?>(
+      onCancel: () async {
+        cancelled = true;
+        await current?.cancel();
+      },
+    );
+    unawaited(open());
+    return out.stream;
+  }
+
   RpcRequest _attach(RpcRequest request, Map<String, String> headers) {
     var req = request;
     headers.forEach((name, value) {

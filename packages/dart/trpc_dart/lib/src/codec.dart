@@ -217,5 +217,14 @@ _Encoded encodeNode(Object? value) {
     }
     return _Encoded(out, annotations.isEmpty ? null : annotations);
   }
+  if (value is Set<Object?>) {
+    final child = encodeNode(value.toList());
+    return _Encoded(
+      child.value,
+      child.annotation == null
+          ? const <Object?>['set']
+          : <Object?>['set', child.annotation],
+    );
+  }
   return _Encoded(value, null);
 }

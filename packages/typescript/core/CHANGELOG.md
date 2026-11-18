@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Contract IR procedure metadata gains `supportsLastEventId` for tracked subscriptions.
+- Synchronized v0.2.0 lockstep release.
+
 ## 0.1.4
 
 - Synchronized v0.1.4 lockstep release with the tsconfig-independent extractor.

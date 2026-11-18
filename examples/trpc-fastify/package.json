@@ -12,6 +12,10 @@
     "fastify": "^5.0.0",
     "jiti": "^2.6.0",
     "superjson": "^2.2.3",
+    "ws": "^8.23.0",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2"
   }
 }

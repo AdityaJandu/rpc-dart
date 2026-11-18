@@ -99,6 +99,9 @@ void main() {
 
       final events = <String>[];
       final done = Completer<void>();
+      // Subscribe to the start-frame signal before opening the stream so the
+      // first connection's start frame is captured deterministically.
+      final firstStart = server.starts.first;
       final subscription = client
           .subscribe<String>(
             path: 'streams.onActivity',
@@ -118,21 +121,19 @@ void main() {
           )
           .listen(events.add, onDone: done.complete);
 
-      await server.connected.future;
-      await _pump();
-      final firstId = server.startIds().single;
+      final firstFrame = await firstStart;
+      final firstId = firstFrame['id']! as int;
       server.sendData(firstId, 'one', trackedId: 'evt-1');
       server.sendData(firstId, 'two', trackedId: 'evt-2');
-      await _pump();
 
-      // Server asks everyone to reconnect (e.g. before a deploy).
+      // Server asks everyone to reconnect (e.g. before a deploy). Await the
+      // second connection's start frame directly instead of pumping a fixed
+      // delay, which races the async reconnect chain on slow CI runners.
+      final secondStart = server.starts.first;
       server.sendReconnect();
-      await _pump();
-
-      await server.connected.future;
-      final secondId = server.startIds().last;
+      final startFrame = await secondStart;
+      final secondId = startFrame['id']! as int;
       // Re-subscribe frame must resume from the latest tracked id.
-      final startFrame = server.lastStartFrame!;
       expect(
         (startFrame['params'] as Map<String, Object?>)['lastEventId'],
         'evt-2',
@@ -303,6 +304,13 @@ Future<_Collected> _collect(Stream<Object?> stream) async {
 class _FakeWebSocketServer {
   final List<_FakeWebSocket> sockets = <_FakeWebSocket>[];
   final Completer<void> connected = Completer<void>();
+  final StreamController<Map<String, Object?>> _starts =
+      StreamController<Map<String, Object?>>.broadcast();
+
+  /// Each outbound `subscription` start frame in send order. Tests await a
+  /// specific (re)connection's start frame deterministically instead of
+  /// pumping a fixed number of microtasks (which races on slow CI runners).
+  Stream<Map<String, Object?>> get starts => _starts.stream;
 
   Future<RpcWebSocket> connector(Uri uri, Map<String, String> headers) async {
     final socket = _FakeWebSocket(this);
@@ -424,6 +432,10 @@ class _FakeWebSocket implements RpcWebSocket {
 
   @override
   Future<void> send(Object? data) async {
-    sent.add(data is String ? jsonDecode(data) : data);
+    final frame = data is String ? jsonDecode(data) : data;
+    sent.add(frame);
+    if (frame is Map<String, Object?> && frame['method'] == 'subscription') {
+      server._starts.add(frame);
+    }
   }
 }

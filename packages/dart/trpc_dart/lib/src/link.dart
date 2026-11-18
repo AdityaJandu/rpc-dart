@@ -3,6 +3,7 @@ import 'dart:async';
 import 'codec.dart';
 import 'exceptions.dart';
 import 'query.dart';
+import 'subscription.dart';
 
 /// The kind of tRPC procedure being executed.
 enum RpcProcedureKind {
@@ -72,6 +73,7 @@ class RpcRequest {
     required this.kind,
     required this.input,
     this.context,
+    this.subscription,
   });
 
   /// Dotted procedure path, e.g. `'user.getById'`.
@@ -86,6 +88,10 @@ class RpcRequest {
   /// Optional per-call metadata context.
   final RpcCallContext? context;
 
+  /// Per-subscription mutable state (latest tracked event id, options).
+  /// Present only for streaming requests.
+  final RpcSubscriptionTicket? subscription;
+
   /// Returns a copy of this request with the specified header appended or updated.
   RpcRequest withAddedHeader(String name, String value) {
     final base = context?.headers ?? const <String, String>{};
@@ -93,6 +99,7 @@ class RpcRequest {
       path: path,
       kind: kind,
       input: input,
+      subscription: subscription,
       context: RpcCallContext(
         headers: <String, String>{...base, name: value},
         timeout: context?.timeout,
@@ -109,10 +116,21 @@ abstract class RpcLink {
 
   /// Handles the [request] and calls [next] to continue downstream, or returns a result directly.
   Future<Object?> invoke(RpcRequest request, RpcLinkNext next);
+
+  /// Handles a streaming [request] and calls [next] to continue downstream.
+  /// Termination subscription links (SSE / WebSocket) implement this.
+  Stream<Object?> invokeStream(RpcRequest request, RpcStreamLinkNext next) {
+    return Stream<Object?>.error(
+      StateError('${runtimeType} does not support streaming'),
+    );
+  }
 }
 
 /// Continuation callback forwarding a request to the next link in the chain.
 typedef RpcLinkNext = Future<Object?> Function(RpcRequest request);
+
+/// Continuation callback forwarding a request to the next link's stream.
+typedef RpcStreamLinkNext = Stream<Object?> Function(RpcRequest request);
 
 /// Ordered, validated link pipeline requiring exactly one terminating link.
 class RpcLinkChain {
@@ -147,7 +165,123 @@ class RpcLinkChain {
     return run(0, request);
   }
 
+  /// Dispatches a streaming [request] through the link chain.
+  ///
+  /// When the request carries a subscription ticket, retryable failures
+  /// (network drops, 5xx, server-reconnect notifications) re-run the whole
+  /// chain after the policy's backoff, so middleware links re-resolve headers
+  /// and credentials per attempt. Clean server completions never reconnect.
+  ///
+  /// Controller-based, not async*: an async* generator defers cancellation
+  /// until its next event, which would hang sub.cancel() against a silent
+  /// transport.
+  Stream<Object?> invokeStream(RpcRequest request) {
+    final ticket = request.subscription;
+    if (ticket == null) {
+      return _runStream(0, request);
+    }
+    late final StreamController<Object?> out;
+    StreamSubscription<Object?>? attempt;
+    var cancelled = false;
+    var attemptNumber = 0;
+    var progressed = false;
+
+    Future<void> start() async {
+      progressed = false;
+      late final StreamSubscription<Object?> sub;
+      sub = _runStream(0, request).listen(
+        (value) {
+          progressed = true;
+          out.add(value);
+        },
+        onError: (Object error, StackTrace stackTrace) async {
+          // A superseded attempt's callbacks must not touch the output.
+          if (cancelled || out.isClosed || !identical(attempt, sub)) return;
+          if (!isRetryableStreamError(error)) {
+            out.addError(error, stackTrace);
+            await out.close();
+            return;
+          }
+          // Detach before awaiting: the superseded attempt's onDone fires
+          // during backoff and would otherwise close the output.
+          attempt = null;
+          if (progressed) attemptNumber = 0;
+          attemptNumber++;
+          if (!ticket.options.reconnectPolicy.shouldRetry(attemptNumber)) {
+            out.addError(error, stackTrace);
+            await out.close();
+            return;
+          }
+          ticket.options.onReconnect?.call(attemptNumber, error);
+          try {
+            await _reconnectBackoff(ticket, attemptNumber);
+          } on RpcCancelledException catch (cancelError) {
+            out.addError(cancelError);
+            await out.close();
+            return;
+          }
+          if (!cancelled && !out.isClosed) {
+            await start();
+          }
+        },
+        onDone: () async {
+          if (cancelled || !identical(attempt, sub)) return;
+          await out.close();
+        },
+      );
+      attempt = sub;
+    }
+
+    out = StreamController<Object?>(
+      onCancel: () async {
+        cancelled = true;
+        await attempt?.cancel();
+      },
+    );
+    unawaited(start());
+    return out.stream;
+  }
+
+  Stream<Object?> _runStream(int index, RpcRequest request) {
+    final link = _links[index];
+    final isLast = index == _links.length - 1;
+    if (link.isTermination || isLast) {
+      return link.invokeStream(request, _unreachableStream);
+    }
+    return link.invokeStream(request, (next) => _runStream(index + 1, next));
+  }
+
+  Future<void> _reconnectBackoff(RpcSubscriptionTicket ticket, int attempt) {
+    var delay = ticket.options.reconnectPolicy.delayFor(attempt);
+    // The server's SSE `retry:` hint floors the policy's backoff so the client
+    // honors the requested reconnection interval.
+    final hint = ticket.retryHint;
+    if (hint != null && hint > delay) {
+      delay = hint;
+    }
+    final token = ticket.options.cancelToken;
+    if (token == null || token.isCancelled) {
+      if (token?.isCancelled ?? false) {
+        return Future<void>.error(
+          RpcCancelledException('cancelled during reconnect backoff'),
+        );
+      }
+      return Future<void>.delayed(delay);
+    }
+    return Future.any<void>(<Future<void>>[
+      Future<void>.delayed(delay),
+      token.whenCancelled.then(
+        (_) =>
+            throw RpcCancelledException('cancelled during reconnect backoff'),
+      ),
+    ]);
+  }
+
   Future<Object?> _unreachable(RpcRequest request) {
+    throw StateError('termination link must not call next');
+  }
+
+  Stream<Object?> _unreachableStream(RpcRequest request) {
     throw StateError('termination link must not call next');
   }
 }
@@ -199,6 +333,42 @@ class RpcClient {
       );
     }
     return _chain.invoke(request);
+  }
+
+  /// Opens a subscription stream through the link chain. The returned stream
+  /// already handles reconnection; generated code maps items through the
+  /// model decoder.
+  Stream<Object?> sendStream(RpcRequest request) {
+    if (request.context?.cancelToken?.isCancelled ?? false) {
+      return Stream<Object?>.error(
+        RpcCancelledException('call cancelled before dispatch'),
+      );
+    }
+    return _chain.invokeStream(request);
+  }
+
+  /// Opens a decoded subscription stream for [path]. Inputs are encoded by
+  /// generated code before reaching this call.
+  Stream<T> subscribe<T>({
+    required String path,
+    required Object? input,
+    required T Function(Object?) decode,
+    RpcSubscriptionOptions? options,
+  }) {
+    final ticket = RpcSubscriptionTicket(
+      options ?? const RpcSubscriptionOptions(),
+    );
+    final request = RpcRequest(
+      path: path,
+      kind: RpcProcedureKind.subscription,
+      input: input,
+      subscription: ticket,
+      context: RpcCallContext(
+        headers: ticket.options.headers,
+        cancelToken: ticket.options.cancelToken,
+      ),
+    );
+    return sendStream(request).map(decode);
   }
 }
 

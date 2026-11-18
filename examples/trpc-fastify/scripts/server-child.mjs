@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+// Ephemeral port so parallel e2e runs never collide.
+process.env.PORT ??= '0';
 const jiti = createJiti(path.join(here, '..', 'src', 'server.ts'));
 const mod = await jiti.import(path.join(here, '..', 'src', 'server.ts'));
 const server = await mod.startExampleServer();

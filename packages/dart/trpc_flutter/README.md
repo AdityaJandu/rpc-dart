@@ -28,8 +28,8 @@ Add `trpc_flutter` and `trpc_dart` to your `pubspec.yaml`:
 dependencies:
   flutter:
     sdk: flutter
-  trpc_dart: ^0.1.4
-  trpc_flutter: ^0.1.4
+  trpc_dart: ^0.2.0
+  trpc_flutter: ^0.2.0
 ```
 
 Then run:
@@ -150,3 +150,28 @@ ValueListenableProvider<RpcAsyncState<User>>.value(
 ## License
 
 MIT © [Aditya Jandu](https://github.com/AdityaJandu)
+
+## Live subscriptions
+
+`RpcSubscriptionController` binds generated `.subscribe()` streams to a
+`ValueListenable<RpcSubscriptionState<T>>`, surfaces a `reconnecting` status
+across drops, and can auto-invalidate query-cache prefixes as events arrive:
+
+```dart
+final controller = RpcSubscriptionController<String>(
+  streamFactory: ({lastEventId, onReconnect}) => api.streams.onActivityFeed
+      .subscribe(
+        StreamsOnActivityFeedInput(
+          lastEventId: lastEventId == null ? null : RpcPresent(lastEventId),
+        ),
+        options: RpcSubscriptionOptions(
+          lastEventId: lastEventId,
+          onReconnect: onReconnect,
+        ),
+      )
+      .map((event) => event.message),
+  keepHistoryCount: 20,
+  queryCache: client.cache,
+  invalidatePrefixesOnData: [['streams', 'onActivityFeed']],
+)..start();
+```

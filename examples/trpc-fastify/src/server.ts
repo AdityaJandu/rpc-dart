@@ -1,7 +1,9 @@
 
 import fastify from 'fastify';
-import { initTRPC, TRPCError } from '@trpc/server';
+import { initTRPC, TRPCError, tracked } from '@trpc/server';
+import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
+import { WebSocketServer } from 'ws';
 import { z } from 'zod';
 import superjson from 'superjson';
 import { resolve } from 'node:path';
@@ -200,6 +202,11 @@ export const userRouter = t.router({
         nickname: input.nickname ?? null,
       };
 
+      recordActivity(
+        'user.update',
+        `nickname set to ${updatedUser.nickname ?? '(cleared)'}`,
+      );
+
       return updatedUser;
     }),
 });
@@ -212,6 +219,112 @@ export const postsRouter = t.router({
     }),
 });
 
+// -----------------------------------------------------------------------------
+// Real-time streams
+// -----------------------------------------------------------------------------
+
+interface ActivityEvent {
+  id: string;
+  kind: string;
+  message: string;
+  at: Date;
+}
+
+const activityLog: ActivityEvent[] = [];
+const activityListeners = new Set<(event: ActivityEvent) => void>();
+let activitySeq = 0;
+
+function recordActivity(kind: string, message: string): ActivityEvent {
+  activitySeq++;
+  const event: ActivityEvent = {
+    id: String(activitySeq),
+    kind,
+    message,
+    at: new Date(),
+  };
+  activityLog.push(event);
+  for (const listener of activityListeners) {
+    listener(event);
+  }
+  return event;
+}
+
+const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+
+export const streamsRouter = t.router({
+  onServerTick: publicProcedure.subscription(async function* (opts) {
+    let tick = 0;
+    const signal = opts.signal ?? new AbortController().signal;
+    while (!signal.aborted) {
+      const usage = process.memoryUsage();
+      yield {
+        tick,
+        timestamp: new Date(),
+        memoryBytes: BigInt(usage.heapUsed),
+      };
+      tick++;
+      await sleep(250, signal);
+    }
+  }),
+
+  onActivityFeed: publicProcedure
+    .input(
+      z.object({
+        lastEventId: z.string().nullish(),
+        limit: z.number().int().optional(),
+      }),
+    )
+    .subscription(async function* (opts) {
+      const lastEventId = opts.input?.lastEventId;
+
+      // Replay everything the client missed, then stream live events.
+      const replayed = lastEventId
+        ? activityLog.filter((event) => Number(event.id) > Number(lastEventId))
+        : activityLog;
+      const limit = opts.input?.limit;
+      for (const event of limit
+        ? replayed.slice(-limit)
+        : replayed) {
+        yield tracked(event.id, event);
+      }
+
+      const queue: ActivityEvent[] = [];
+      const listener = (event: ActivityEvent): void => {
+        queue.push(event);
+      };
+      activityListeners.add(listener);
+      try {
+        while (!opts.signal?.aborted) {
+          const queued = queue.shift();
+          if (queued) {
+            yield tracked(queued.id, queued);
+            continue;
+          }
+          await sleep(25, opts.signal ?? undefined);
+        }
+      } finally {
+        activityListeners.delete(listener);
+      }
+    }),
+
+  pushActivity: protectedProcedure
+    .input(z.object({ message: z.string() }))
+    .mutation(({ input }) => {
+      return recordActivity('note', input.message);
+    }),
+});
+
 export const appRouter = t.router({
   health: publicProcedure.query(() => ({
     ok: true,
@@ -219,6 +332,7 @@ export const appRouter = t.router({
 
   user: userRouter,
   posts: postsRouter,
+  streams: streamsRouter,
 });
 
 export type AppRouter = typeof appRouter;
@@ -262,6 +376,30 @@ export async function startExampleServer(): Promise<{
         );
       },
     },
+  });
+
+  // tRPC v11 WebSocket transport alongside the SSE endpoint: a standalone
+  // noServer ws upgrade handler scoped to the tRPC prefix.
+  const wss = new WebSocketServer({ noServer: true });
+  applyWSSHandler({
+    wss,
+    router: appRouter,
+    createContext: ({ req }: { req: { headers: Record<string, unknown> } }) => {
+      const authorization = req.headers.authorization;
+      return createContext(
+        Array.isArray(authorization)
+          ? authorization[0]
+          : (authorization as string | undefined),
+      );
+    },
+  });
+  app.server.on('upgrade', (req, socket, head) => {
+    const url = req.url ?? '';
+    if (url.startsWith(TRPC_PREFIX)) {
+      wss.handleUpgrade(req, socket, head, (client) => {
+        wss.emit('connection', client, req);
+      });
+    }
   });
 
   try {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- `generate` / `watch` now emit subscription bindings (`Stream<T> subscribe(...)`) extracted from tRPC v11 async generators, `tracked()` generators, and observables.
+- `dart format` stays part of the emit pipeline (introduced in 0.1.4); subscription bindings are format-stable and byte-exact under `check`.
+- Generator version bump to v0.2.0 matching monorepo lockstep.
+
 ## 0.1.4
 
 - Ships the tsconfig-independent extractor: `generate` / `check` / `watch` / `diff` / `doctor` now work on any backend tsconfig, including `Node16` / `NodeNext` resolution with `verbatimModuleSyntax` and build/lint flags like `noUnusedLocals` or `rootDir` set.

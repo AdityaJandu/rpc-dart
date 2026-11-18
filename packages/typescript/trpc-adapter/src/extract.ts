@@ -31,7 +31,7 @@ export interface ExtractResult {
   diagnostics: RpcDartDiagnostic[];
 }
 
-const GENERATOR = { name: 'rpc-dart', version: '0.1.0' } as const;
+const GENERATOR = { name: 'rpc-dart', version: '0.2.0' } as const;
 
 export async function extractContract(options: ExtractOptions): Promise<ExtractResult> {
   const tsconfigDir = path.dirname(options.tsconfigPath);
@@ -74,11 +74,15 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
       : parsed.options.moduleResolution === ts.ModuleResolutionKind.NodeNext
         ? ('nodenext' as const)
         : undefined;
+  const subscriptionPaths = new Set(
+    probePaths.filter((p) => p.kind === 'subscription').map((p) => p.path),
+  );
   const harnessPath = path.join(tsconfigDir, harnessFileName());
   const harnessSource = buildHarness(
     entryImportPath(tsconfigDir, entryAbsolute, resolution),
     options.exportName,
     probePaths.map((p) => p.path),
+    subscriptionPaths,
   );
 
   // 4. Program under the user's own tsconfig, harness overlaid in memory.
@@ -193,6 +197,13 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
       access: p.meta['access'] === 'authenticated' ? 'authenticated' : 'public',
       extra: {},
     };
+    if (p.kind === 'subscription') {
+      // `tracked()` yields resolve to a true literal via the harness; without
+      // tracked events the client cannot resume, so the flag stays false.
+      const trackedType = typeFromAlias(harnessSf, checker, pathAlias(p.path, 'tracked'));
+      meta.extra['supportsLastEventId'] =
+        trackedType !== undefined && checker.typeToString(trackedType) === 'true';
+    }
     entries.push({ path: p.path, kind: p.kind, input, output, meta, docs: null });
   }
   classifier.currentProcedure = undefined;

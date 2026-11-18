@@ -39,6 +39,25 @@ class ContextLink extends RpcLink {
     return next(req);
   }
 
+  /// Stream counterpart: re-runs per connect attempt because the reconnect
+  /// engine re-invokes the whole chain, giving every attempt a fresh
+  /// correlation id and current dynamic headers.
+  @override
+  Stream<Object?> invokeStream(
+      RpcRequest request, RpcStreamLinkNext next) async* {
+    var req = request;
+    final dynamic = await dynamicHeaders?.call() ?? const <String, String>{};
+    dynamic.forEach((name, value) {
+      if (req.context?.headers.containsKey(name) != true) {
+        req = req.withAddedHeader(name, value);
+      }
+    });
+    if (correlate && req.context?.headers['x-request-id'] == null) {
+      req = req.withAddedHeader('x-request-id', _nextRequestId());
+    }
+    yield* next(req);
+  }
+
   String _nextRequestId() {
     _counter += 1;
     return 'req-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-$_counter';

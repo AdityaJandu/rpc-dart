@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'link.dart';
 
 /// One structured log event: 'request', 'response', or 'error'.
@@ -109,5 +111,54 @@ class LoggingLink extends RpcLink {
       ));
       rethrow;
     }
+  }
+
+  /// Stream counterpart: logs `request` on connect, `response` on clean
+  /// completion, and `error` on stream failure. Reconnect attempts surface
+  /// as fresh request events because the reconnect engine re-runs the chain
+  /// per attempt. Controller-based so user cancellation aborts downstream
+  /// immediately.
+  @override
+  Stream<Object?> invokeStream(RpcRequest request, RpcStreamLinkNext next) {
+    final stopwatch = Stopwatch()..start();
+    onEvent(RpcLogEvent(
+      event: 'request',
+      path: request.path,
+      kind: request.kind.name,
+      headers: _redact(request.context?.headers),
+      durationMs: 0,
+    ));
+    late final StreamController<Object?> controller;
+    late final StreamSubscription<Object?> downstream;
+    controller = StreamController<Object?>(
+      onCancel: () => downstream.cancel(),
+    );
+    downstream = next(request).listen(
+      controller.add,
+      onError: (Object error, StackTrace stackTrace) {
+        stopwatch.stop();
+        onEvent(RpcLogEvent(
+          event: 'error',
+          path: request.path,
+          kind: request.kind.name,
+          headers: _redact(request.context?.headers),
+          durationMs: stopwatch.elapsedMilliseconds,
+          error: error,
+        ));
+        controller.addError(error, stackTrace);
+      },
+      onDone: () {
+        stopwatch.stop();
+        onEvent(RpcLogEvent(
+          event: 'response',
+          path: request.path,
+          kind: request.kind.name,
+          headers: _redact(request.context?.headers),
+          durationMs: stopwatch.elapsedMilliseconds,
+        ));
+        controller.close();
+      },
+    );
+    return controller.stream;
   }
 }

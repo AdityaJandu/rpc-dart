@@ -27,7 +27,8 @@ Rename a procedure or change a Zod field on the server: the Dart bindings regene
 | 7 | [BLoC](guides/bloc.md) | Cubit & Bloc integration with reactive auto-refresh |
 | 8 | [Provider](guides/provider.md) | `ChangeNotifier` integration with optimistic updates |
 | 9 | [Riverpod](guides/riverpod.md) | `FutureProvider.family` / `AsyncNotifier` patterns |
-| 10 | [Monorepo & CI](guides/monorepo-and-ci.md) | pnpm/Turborepo setup, watch mode, GitHub Actions gates |
+| 10 | [Subscriptions](guides/subscriptions.md) | SSE & WebSocket streaming, `tracked()` resume, `RpcSubscriptionController` |
+| 11 | [Monorepo & CI](guides/monorepo-and-ci.md) | pnpm/Turborepo setup, watch mode, GitHub Actions gates |
 | 11 | [CLI reference](reference/cli.md) | All 7 commands, flags, config schema, exit codes |
 | 12 | [Dart runtime API](reference/dart-runtime-api.md) | `RpcClient`, `RpcOpt`, `RpcResult`, `RpcQueryCache`, `RpcJson`, links |
 | 13 | [Troubleshooting](reference/troubleshooting.md) | Diagnostic codes, doctor checks, common monorepo fixes |

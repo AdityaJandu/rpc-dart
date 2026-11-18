@@ -130,6 +130,7 @@ export class TypeClassifier {
     if (flags & ts.TypeFlags.Boolean) return 'boolean';
     if (flags & ts.TypeFlags.BigInt) return 'BigInt';
     if (flags & ts.TypeFlags.Void) return 'void';
+    if (flags & ts.TypeFlags.Never) return 'never';
     if (flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return { kind: 'unknown' };
     if (flags & ts.TypeFlags.Null || flags & ts.TypeFlags.Undefined) return { kind: 'unknown' };
 

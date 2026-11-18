@@ -1,6 +1,6 @@
 {
   "name": "@rpc-dart/trpc-adapter",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "tRPC v11 extraction adapter: route probe, inference harness, and Contract IR normalizer.",
   "type": "module",
   "main": "dist/index.js",

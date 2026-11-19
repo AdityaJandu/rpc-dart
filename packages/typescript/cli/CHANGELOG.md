@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- New `adapter: 'trpc' | 'orpc' | 'auto'` target option and `--adapter` flag across `generate`, `watch`, `check`, `diff`, and `doctor`; `auto` (default) probes the export's router shape (`_def` vs `~orpc`) and dispatches to the matching adapter.
+- `init` detects oRPC routers (`/contract` / `/server` imports) and records the adapter in the scaffolded config.
+- Depends on the new `@rpc-dart/orpc-adapter` package.
+- Synchronized v0.3.0 lockstep release.
+
+
 ## 0.2.0
 
 - `generate` / `watch` now emit subscription bindings (`Stream<T> subscribe(...)`) extracted from tRPC v11 async generators, `tracked()` generators, and observables.

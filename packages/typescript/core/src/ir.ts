@@ -19,7 +19,10 @@ export type PrimitiveName =
   | 'BigInt'
   | 'void'
   | 'never'
-  | 'JsonValue';
+  | 'JsonValue'
+  | 'Bytes'
+  | 'File'
+  | 'ByteStream';
 
 export interface PrimitiveDef {
   kind: 'primitive';

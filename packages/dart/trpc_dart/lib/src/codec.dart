@@ -1,3 +1,8 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'binary.dart';
+import 'codec/rpc_json.dart';
 import 'exceptions.dart';
 
 /// Wire transformer selection; must match the server's initTRPC transformer.
@@ -16,6 +21,11 @@ Object? superjsonDecode(Object? envelope) {
   if (values is Map<String, Object?>) {
     return applyMeta(json, values);
   }
+  // Root-level annotations arrive as [annotation, children?]; the annotation
+  // itself is either a simple kind string or a tuple like ['custom', name].
+  if (values is List<Object?> && values.isNotEmpty) {
+    return applyMeta(json, values[0]);
+  }
   return json;
 }
 
@@ -25,10 +35,28 @@ Object? superjsonDecode(Object? envelope) {
 /// dotted paths (`"receipt.authorizedAt"`) or nested segments; both forms are
 /// normalized here before application.
 Object? applyMeta(Object? value, Object? annotation) {
+  if (annotation is String) {
+    return applyAnnotation(value, annotation);
+  }
+  if (annotation is List<Object?> &&
+      annotation.isNotEmpty &&
+      annotation[0] is List<Object?>) {
+    // superjson's annotation walker wraps tuple annotations one level deeper
+    // (`[['custom', name]]`); unwrap before dispatching on the handler kind.
+    annotation = annotation[0];
+  }
   if (annotation is List<Object?> && annotation.isNotEmpty) {
     final kind = annotation[0];
     if (kind is! String) {
       throw RpcDecodeException('invalid superjson annotation: $annotation');
+    }
+    if (kind == 'custom') {
+      final name = annotation.length > 1 ? annotation[1] : null;
+      if (name is! String) {
+        throw RpcDecodeException(
+            'invalid superjson custom annotation: $annotation');
+      }
+      return applyCustomAnnotation(value, name);
     }
     return applyAnnotation(value, kind);
   }
@@ -161,6 +189,37 @@ Object? applyAnnotation(Object? value, String kind) {
   }
 }
 
+/// Decodes superjson `registerCustom` payloads (wire shape
+/// `['custom', name]`). rpc-dart's tRPC binary convention registers
+/// `Uint8Array` (base64) and `File` ({name, type, data}) on the server.
+Object? applyCustomAnnotation(Object? value, String name) {
+  switch (name) {
+    case 'Uint8Array':
+      if (value case final String v) {
+        try {
+          return base64Decode(v);
+        } on FormatException catch (error) {
+          throw RpcDecodeException(
+            'superjson Uint8Array annotation without a base64 string',
+            expected: 'base64 String',
+            actual: v,
+            cause: error,
+          );
+        }
+      }
+      throw RpcDecodeException(
+          'superjson Uint8Array annotation without a string value',
+          expected: 'String',
+          actual: value.runtimeType.toString());
+    case 'File':
+      return RpcJson.asFile(value);
+    default:
+      throw RpcDecodeException(
+        'unsupported superjson custom annotation "$name" at path',
+      );
+  }
+}
+
 class _Encoded {
   const _Encoded(this.value, this.annotation);
 
@@ -174,10 +233,21 @@ class _Encoded {
 Object? superjsonEncode(Object? tree) {
   final result = encodeNode(tree);
   final envelope = <String, Object?>{'json': result.value};
-  if (result.annotation != null) {
-    envelope['meta'] = <String, Object?>{'values': result.annotation};
+  final annotation = result.annotation;
+  if (annotation != null) {
+    envelope['meta'] = <String, Object?>{'values': _wrapAnnotation(annotation)};
   }
   return envelope;
+}
+
+/// superjson's annotation walker reads every array as `[value, children?]`;
+/// multi-element tuple annotations (`['custom', name]`) need one extra wrap
+/// so the walker does not split them apart.
+Object? _wrapAnnotation(Object? annotation) {
+  if (annotation is List<Object?> && annotation.length > 1) {
+    return <Object?>[annotation];
+  }
+  return annotation;
 }
 
 /// Encodes a Dart tree for the plain-json transformer: special Dart types
@@ -193,6 +263,28 @@ _Encoded encodeNode(Object? value) {
   if (value is BigInt) {
     return _Encoded(value.toString(), const <Object?>['bigint']);
   }
+  if (value is Uint8List) {
+    return _Encoded(
+        base64Encode(value), const <Object?>['custom', 'Uint8Array']);
+  }
+  if (value is RpcFile) {
+    final bytes = value.bufferedBytes;
+    if (bytes == null) {
+      throw RpcException(
+        'streaming RpcFile cannot be sent over the tRPC superjson wire; '
+        'use RpcFile.bytes or the oRPC multipart transport',
+        code: 'ENCODE',
+      );
+    }
+    return _Encoded(
+      <String, Object?>{
+        'name': value.filename,
+        if (value.contentType != null) 'type': value.contentType,
+        'data': base64Encode(bytes),
+      },
+      const <Object?>['custom', 'File'],
+    );
+  }
   if (value is Map<String, Object?>) {
     final out = <String, Object?>{};
     final annotations = <String, Object?>{};
@@ -200,7 +292,7 @@ _Encoded encodeNode(Object? value) {
       final child = encodeNode(entry.value);
       out[entry.key] = child.value;
       if (child.annotation != null) {
-        annotations[entry.key] = child.annotation!;
+        annotations[entry.key] = _wrapAnnotation(child.annotation)!;
       }
     }
     return _Encoded(out, annotations.isEmpty ? null : annotations);
@@ -212,7 +304,7 @@ _Encoded encodeNode(Object? value) {
       final child = encodeNode(value[i]);
       out.add(child.value);
       if (child.annotation != null) {
-        annotations['$i'] = child.annotation!;
+        annotations['$i'] = _wrapAnnotation(child.annotation)!;
       }
     }
     return _Encoded(out, annotations.isEmpty ? null : annotations);

@@ -1,6 +1,6 @@
 name: trpc_dart
 description: Pure Dart runtime for tRPC v11 clients - links, batching, SuperJSON, typed errors, and a state-agnostic query cache.
-version: 0.2.0
+version: 0.3.0
 homepage: https://github.com/AdityaJandu/rpc-dart
 repository: https://github.com/AdityaJandu/rpc-dart
 issue_tracker: https://github.com/AdityaJandu/rpc-dart/issues
@@ -13,7 +13,7 @@ topics:
 environment:
   sdk: ">=3.6.0 <4.0.0"
 dependencies:
-  http: ^1.2.0
+  http: ^1.6.0
 dev_dependencies:
   lints: ^5.0.0
   test: ^1.25.0

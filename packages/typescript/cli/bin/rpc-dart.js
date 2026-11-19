@@ -33,6 +33,7 @@ function flagsObject() {
     exportName: flag('export'),
     out: flag('out'),
     transformer: flag('transformer'),
+    adapter: flag('adapter'),
   };
 }
 
@@ -53,6 +54,7 @@ async function main() {
           entryFile: target.entry,
           exportName: target.exportName,
           outDir: path.resolve(cwd, target.dart?.outDir ?? 'lib/src/api'),
+          adapter: target.adapter,
           transformer: target.transformer,
           policies: policiesFrom(target),
           force: hasFlag('force'),
@@ -74,6 +76,7 @@ async function main() {
           entryFile: target.entry,
           exportName: target.exportName,
           outDir: path.resolve(cwd, target.dart?.outDir ?? 'lib/src/api'),
+          adapter: target.adapter,
           transformer: target.transformer,
           policies: policiesFrom(target),
           debounceMs: Number(flag('debounce-ms') ?? 300),
@@ -99,6 +102,7 @@ async function main() {
           entryFile: target.entry,
           exportName: target.exportName,
           outDir: path.resolve(cwd, target.dart?.outDir ?? 'lib/src/api'),
+          adapter: target.adapter,
           transformer: target.transformer,
           policies: policiesFrom(target),
         });
@@ -122,6 +126,7 @@ async function main() {
           tsconfigPath: target.tsconfigPath,
           entryFile: target.entry,
           exportName: target.exportName,
+          adapter: target.adapter,
           transformer: target.transformer,
           baselinePath: path.resolve(cwd, flag('baseline') ?? 'ir.snapshot.json'),
           updateBaseline: hasFlag('update-baseline'),
@@ -152,6 +157,7 @@ async function main() {
           tsconfigPath: target.tsconfigPath,
           entryFile: target.entry,
           exportName: target.exportName,
+          adapter: target.adapter,
           dartPackagePath: flag('dart-package')
             ? path.resolve(cwd, flag('dart-package'))
             : target.dart?.packagePath

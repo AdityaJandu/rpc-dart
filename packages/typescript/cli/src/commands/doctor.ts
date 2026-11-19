@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { extractContract } from '@rpc-dart/trpc-adapter';
+import { selectAdapter, type AdapterChoice } from '../adapter.js';
 
 export interface DoctorCheck {
   name: string;
@@ -12,6 +12,7 @@ export interface DoctorOptions {
   tsconfigPath?: string;
   entryFile?: string;
   exportName?: string;
+  adapter?: AdapterChoice;
   /** Path to a Dart package whose pubspec version should match the CLI's. */
   dartPackagePath?: string;
 }
@@ -39,13 +40,18 @@ export async function doctorChecks(options: DoctorOptions = {}): Promise<DoctorC
 
   if (options.entryFile && options.exportName) {
     try {
-      await extractContract({
+      const adapter = await selectAdapter({
         tsconfigPath: options.tsconfigPath ?? '',
         entryFile: options.entryFile,
         exportName: options.exportName,
-        protocol: { kind: 'trpc', version: '11', transformer: 'superjson' },
+        adapter: options.adapter,
       });
-      checks.push({ name: 'router-export', status: 'pass', detail: `${options.exportName} extracted` });
+      await adapter.extract({
+        tsconfigPath: options.tsconfigPath ?? '',
+        entryFile: options.entryFile,
+        exportName: options.exportName,
+      });
+      checks.push({ name: 'router-export', status: 'pass', detail: `${options.exportName} extracted (${adapter.kind})` });
     } catch (error) {
       checks.push({
         name: 'router-export',

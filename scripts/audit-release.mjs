@@ -32,10 +32,10 @@ function walk(dir, predicate, acc = []) {
 
 // 1. Version lockstep across npm + pub packages.
 check('version-lockstep', () => {
-  const npm = ['core', 'trpc-adapter', 'dart-generator', 'cli'].map(
+  const npm = ['core', 'trpc-adapter', 'orpc-adapter', 'dart-generator', 'cli'].map(
     (p) => JSON.parse(readFileSync(path.join(ROOT, 'packages/typescript', p, 'package.json'), 'utf-8')).version,
   );
-  const dart = ['trpc_dart', 'trpc_flutter'].map((p) => {
+  const dart = ['trpc_dart', 'trpc_flutter', 'orpc_dart', 'orpc_flutter'].map((p) => {
     const pubspec = readFileSync(path.join(ROOT, 'packages/dart', p, 'pubspec.yaml'), 'utf-8');
     return /^version:\s*(.+)$/m.exec(pubspec)?.[1]?.trim();
   });
@@ -44,7 +44,7 @@ check('version-lockstep', () => {
     throw new Error(`versions differ: npm [${npm.join(', ')}] dart [${dart.join(', ')}]`);
   }
   if (!/^\d+\.\d+\.\d+$/.test(all[0] ?? '')) throw new Error(`invalid version: ${all[0]}`);
-  return `all 6 packages at ${all[0]}`;
+  return `all 9 packages at ${all[0]}`;
 });
 
 // 2. CLI binary + shebang + dist artifacts.
@@ -66,6 +66,7 @@ check('cli-binary', () => {
 check('zero-cast-generated', () => {
   const dirs = [
     path.join(ROOT, 'examples/flutter-app/lib/src/api'),
+    path.join(ROOT, 'examples/flutter-app/lib/src/orpc_api'),
     path.join(ROOT, 'packages/typescript/dart-generator/test/golden'),
   ];
   const offenders = [];
@@ -112,6 +113,12 @@ check('markdown-links', () => {
     path.join(ROOT, 'UPCOMING_TASKS.md'),
     path.join(ROOT, 'CONTRIBUTING.md'),
     ...walk(path.join(ROOT, 'docs'), (f) => f.endsWith('.md')),
+    ...['core', 'trpc-adapter', 'orpc-adapter', 'dart-generator', 'cli'].map(
+      (p) => path.join(ROOT, 'packages/typescript', p, 'README.md'),
+    ),
+    ...['trpc_dart', 'trpc_flutter', 'orpc_dart', 'orpc_flutter'].map(
+      (p) => path.join(ROOT, 'packages/dart', p, 'README.md'),
+    ),
   ];
   const dead = [];
   const linkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
@@ -133,37 +140,39 @@ check('markdown-links', () => {
 
 // 5.5. .pubignore existence + pubspec_overrides architecture + no build/ directories.
 check('dart-packaging', () => {
-  for (const pkg of ['trpc_dart', 'trpc_flutter']) {
-    const pubignore = path.join(ROOT, 'packages/dart', pkg, '.pubignore');
+  const dartPackages = {
+    trpc_dart: { hosted: [] },
+    trpc_flutter: { hosted: ['trpc_dart'] },
+    orpc_dart: { hosted: ['trpc_dart'] },
+    orpc_flutter: { hosted: ['orpc_dart', 'trpc_flutter'] },
+  };
+  for (const [pkg, { hosted }] of Object.entries(dartPackages)) {
+    const dir = path.join(ROOT, 'packages/dart', pkg);
+    const pubignore = path.join(dir, '.pubignore');
     if (!existsSync(pubignore)) throw new Error(`missing .pubignore in packages/dart/${pkg}`);
-    const content = readFileSync(pubignore, 'utf-8');
-    if (!content.includes('build/')) throw new Error(`${pkg}/.pubignore missing build/ exclusion`);
-    if (!content.includes('.dart_tool/')) throw new Error(`${pkg}/.pubignore missing .dart_tool/ exclusion`);
-  }
+    const ignoreContent = readFileSync(pubignore, 'utf-8');
+    if (!ignoreContent.includes('build/')) throw new Error(`${pkg}/.pubignore missing build/ exclusion`);
+    if (!ignoreContent.includes('.dart_tool/')) throw new Error(`${pkg}/.pubignore missing .dart_tool/ exclusion`);
 
-  const flutterPubignore = readFileSync(path.join(ROOT, 'packages/dart/trpc_flutter/.pubignore'), 'utf-8');
-  if (!flutterPubignore.includes('pubspec_overrides.yaml')) {
-    throw new Error('trpc_flutter/.pubignore missing pubspec_overrides.yaml exclusion');
-  }
-
-  const flutterOverrides = path.join(ROOT, 'packages/dart/trpc_flutter/pubspec_overrides.yaml');
-  if (!existsSync(flutterOverrides)) {
-    throw new Error('missing packages/dart/trpc_flutter/pubspec_overrides.yaml');
-  }
-
-  const flutterPubspec = readFileSync(path.join(ROOT, 'packages/dart/trpc_flutter/pubspec.yaml'), 'utf-8');
-  const flutterVersion = /^version:\s*(.+)$/m.exec(flutterPubspec)?.[1]?.trim();
-  const constraint = `^${flutterVersion}`;
-  if (!new RegExp(`trpc_dart:\\s*\\^${flutterVersion.replaceAll('.', '\\.')}\\b`).test(flutterPubspec)) {
-    throw new Error(`trpc_flutter/pubspec.yaml must declare hosted constraint trpc_dart: ${constraint}`);
-  }
-  if (/publish_to:\s*none/.test(flutterPubspec)) {
-    throw new Error('trpc_flutter/pubspec.yaml must not contain publish_to: none');
-  }
-
-  const dartPubspec = readFileSync(path.join(ROOT, 'packages/dart/trpc_dart/pubspec.yaml'), 'utf-8');
-  if (/publish_to:\s*none/.test(dartPubspec)) {
-    throw new Error('trpc_dart/pubspec.yaml must not contain publish_to: none');
+    const pubspec = readFileSync(path.join(dir, 'pubspec.yaml'), 'utf-8');
+    if (/publish_to:\s*none/.test(pubspec)) {
+      throw new Error(`${pkg}/pubspec.yaml must not contain publish_to: none`);
+    }
+    const version = /^version:\s*(.+)$/m.exec(pubspec)?.[1]?.trim();
+    for (const sibling of hosted) {
+      const re = new RegExp(`${sibling}:\\s*\\^${version.replaceAll('.', '\\.')}\\b`);
+      if (!re.test(pubspec)) {
+        throw new Error(`${pkg}/pubspec.yaml must declare hosted constraint ${sibling}: ^${version}`);
+      }
+    }
+    if (hosted.length > 0) {
+      if (!ignoreContent.includes('pubspec_overrides.yaml')) {
+        throw new Error(`${pkg}/.pubignore missing pubspec_overrides.yaml exclusion`);
+      }
+      if (!existsSync(path.join(dir, 'pubspec_overrides.yaml'))) {
+        throw new Error(`missing packages/dart/${pkg}/pubspec_overrides.yaml`);
+      }
+    }
   }
 
   const buildDirs = walk(path.join(ROOT, 'packages/dart'), (f) => path.basename(f) === 'build' && statSync(f).isDirectory());
@@ -178,13 +187,13 @@ check('dart-packaging', () => {
     throw new Error(`prepare-publish + restore altered git state in packages/dart:\nBefore:\n${beforeStatus}\nAfter:\n${afterStatus}`);
   }
 
-  return 'pubspec_overrides architecture verified; clean prepare/restore cycle; no build/ directories';
+  return 'pubspec_overrides architecture verified for 4 packages; clean prepare/restore cycle; no build/ directories';
 });
 
-// 6. Publish readiness + zero-flag check against the example config.
+// 6. Publish readiness + zero-flag check against both example configs.
 check('publish-readiness', () => {
-  const npm = ['core', 'trpc-adapter', 'dart-generator', 'cli'].map((p) => path.join(ROOT, 'packages/typescript', p));
-  const dart = ['trpc_dart', 'trpc_flutter'].map((p) => path.join(ROOT, 'packages/dart', p));
+  const npm = ['core', 'trpc-adapter', 'orpc-adapter', 'dart-generator', 'cli'].map((p) => path.join(ROOT, 'packages/typescript', p));
+  const dart = ['trpc_dart', 'trpc_flutter', 'orpc_dart', 'orpc_flutter'].map((p) => path.join(ROOT, 'packages/dart', p));
   for (const dir of [...npm, ...dart]) {
     for (const required of ['README.md', 'CHANGELOG.md', 'LICENSE']) {
       if (!existsSync(path.join(dir, required))) {
@@ -192,10 +201,15 @@ check('publish-readiness', () => {
       }
     }
   }
-  const exampleConfig = path.join(ROOT, 'examples/trpc-fastify/rpc-dart.config.json');
-  if (!existsSync(exampleConfig)) throw new Error('missing examples/trpc-fastify/rpc-dart.config.json');
-  execSync(`node ${path.relative(path.join(ROOT, 'examples/trpc-fastify'), path.join(ROOT, 'packages/typescript/cli/bin/rpc-dart.js'))} check`, { cwd: path.join(ROOT, 'examples/trpc-fastify'), stdio: 'pipe' });
-  return 'manifests complete; zero-flag check passes on the example config';
+  const cliBin = path.join(ROOT, 'packages/typescript/cli/bin/rpc-dart.js');
+  for (const example of ['examples/trpc-fastify', 'examples/orpc-fastify']) {
+    const cwd = path.join(ROOT, example);
+    if (!existsSync(path.join(cwd, 'rpc-dart.config.json'))) {
+      throw new Error(`missing ${example}/rpc-dart.config.json`);
+    }
+    execSync(`node ${path.relative(cwd, cliBin)} check`, { cwd, stdio: 'pipe' });
+  }
+  return 'manifests complete; zero-flag check passes on trpc-fastify and orpc-fastify';
 });
 
 // Report.

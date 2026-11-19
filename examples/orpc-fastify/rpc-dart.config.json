@@ -1,0 +1,13 @@
+{
+  "tsconfig": "tsconfig.json",
+  "entry": "src/server.ts",
+  "exportName": "appRouter",
+  "adapter": "orpc",
+  "dart": {
+    "outDir": "../flutter-app/lib/src/orpc_api",
+    "packagePath": "../flutter-app"
+  },
+  "policies": {
+    "unserializablePolicy": "error"
+  }
+}

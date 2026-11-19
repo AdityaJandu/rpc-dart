@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+- Binary emission: `Bytes` fields decode through `RpcJson.asBytes`, `File` fields through `RpcJson.asFile`; root-binary unary procedures emit direct `Uint8List` / `RpcFile` signatures, and `ByteStream` outputs emit streaming methods (`RpcByteStream`) with zero `as` casts.
+- Unary methods gain optional `onSendProgress` / `onReceiveProgress` callbacks folded into the call context via `RpcCallContext.withProgress`.
+- Typed oRPC error maps emit as sealed Dart error models with per-code variants.
+- `api.dart` documents protocol-aware client construction (`OrpcLink` for oRPC, `HttpBatchLink` for tRPC).
+- Generator version now reads the package version (no drift).
+- Synchronized v0.3.0 lockstep release.
+
+
 ## 0.2.0
 
 - Emits `.subscribe(...)` methods on subscription procedures returning `Stream<T>` with zero-cast stream-item decoding (model `fromJson` closures and `RpcJson` tearoffs for primitives).

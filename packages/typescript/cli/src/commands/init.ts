@@ -14,6 +14,7 @@ export interface InitResult {
   config: {
     entry: string;
     exportName: string;
+    adapter: 'trpc' | 'orpc';
     transformer: 'superjson' | 'json';
     dart: { outDir: string; packagePath?: string };
     policies: { unserializablePolicy: 'error' | 'warn-dynamic' | 'skip-procedure' };
@@ -60,9 +61,13 @@ export async function initWorkspace(workspaceDir: string, options: InitOptions =
       'appRouter');
 
   const flutterTarget = flutterDirs[0];
+  const adapter: 'trpc' | 'orpc' = /@orpc\/(contract|server)/.test(entryText)
+    ? 'orpc'
+    : 'trpc';
   const config: InitResult['config'] = {
     entry: entryFile,
     exportName,
+    adapter,
     transformer: 'superjson',
     dart: {
       outDir: flutterTarget
@@ -81,6 +86,7 @@ export async function initWorkspace(workspaceDir: string, options: InitOptions =
 export default defineConfig({
   entry: ${JSON.stringify(config.entry)},
   exportName: ${JSON.stringify(config.exportName)},
+  adapter: ${JSON.stringify(config.adapter)},
   transformer: ${JSON.stringify(config.transformer)},
   dart: {
     outDir: ${JSON.stringify(config.dart.outDir)},
@@ -117,7 +123,7 @@ function findRouterCandidates(workspaceDir: string): string[] {
       ) {
         try {
           const text = readFileSync(full, 'utf-8');
-          if (text.includes('initTRPC')) {
+          if (text.includes('initTRPC') || /@orpc\/(contract|server)/.test(text)) {
             candidates.push(full);
           }
         } catch {

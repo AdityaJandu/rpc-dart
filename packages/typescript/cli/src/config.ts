@@ -7,6 +7,8 @@ export interface RpcDartTarget {
   tsconfig?: string;
   entry: string;
   exportName: string;
+  /** Extraction adapter; 'auto' (default) probes the export's router shape. */
+  adapter?: 'trpc' | 'orpc' | 'auto';
   transformer?: 'superjson' | 'json';
   dart?: { outDir: string; packagePath?: string };
   policies?: { unserializablePolicy?: 'error' | 'warn-dynamic' | 'skip-procedure' };
@@ -71,6 +73,7 @@ export async function resolveTargets(
     exportName?: string;
     out?: string;
     transformer?: string;
+    adapter?: string;
   },
 ): Promise<Array<RpcDartTarget & { tsconfigPath: string }>> {
   const configPath = findConfigFile(searchDir, flags.config);
@@ -88,6 +91,7 @@ export async function resolveTargets(
         {
           entry: path.resolve(path.dirname(tsconfigPath), flags.entry),
           exportName: flags.exportName,
+          adapter: (flags.adapter as 'trpc' | 'orpc' | 'auto' | undefined) ?? 'auto',
           transformer: (flags.transformer as 'superjson' | 'json' | undefined) ?? 'superjson',
           dart: { outDir: flags.out },
           tsconfigPath,
@@ -103,6 +107,8 @@ export async function resolveTargets(
     ...project,
     entry: path.resolve(configDir, flags.entry ?? project.entry),
     exportName: flags.exportName ?? project.exportName,
+    adapter:
+      (flags.adapter as 'trpc' | 'orpc' | 'auto' | undefined) ?? project.adapter ?? 'auto',
     transformer:
       (flags.transformer as 'superjson' | 'json' | undefined) ?? project.transformer,
     dart: {

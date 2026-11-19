@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Contract IR binary primitives: `Bytes` (Uint8Array/ArrayBuffer/Buffer), `File` (File/Blob), and `ByteStream` (ReadableStream<Uint8Array>) join `PrimitiveName`.
+- `AssembleEntry.error` passthrough: typed error maps reach `ProcedureRecord.error` instead of being discarded.
+- Shared extraction machinery now lives in core: `TypeClassifier` (with binary symbol dispatch) and the compiler host (`overlayHost`, `typeFromAlias`, `neutralizeOptions`, `resolutionKind`, `entryImportPath`, `pathAlias`) are consumed by both the tRPC and oRPC adapters.
+- Synchronized v0.3.0 lockstep release.
+
+
 ## 0.2.0
 
 - Contract IR procedure metadata gains `supportsLastEventId` for tracked subscriptions.

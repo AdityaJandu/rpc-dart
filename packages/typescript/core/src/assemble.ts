@@ -19,6 +19,7 @@ export interface AssembleEntry {
   kind: ProcedureRecord['kind'];
   input: TypeDef | null;
   output: TypeDef;
+  error?: TypeDef | null;
   meta: ProcedureMeta;
   docs?: string | null;
 }
@@ -224,7 +225,7 @@ export function assembleContract(options: AssembleOptions): ContractIR {
       kind: entry.kind,
       input: entry.input === null ? null : intertype.intern(entry.input),
       output: intertype.intern(entry.output),
-      error: null,
+      error: entry.error === null || entry.error === undefined ? null : intertype.intern(entry.error),
       meta: entry.meta,
       deprecated: null,
       docs: entry.docs ?? null,

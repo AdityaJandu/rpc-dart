@@ -1,0 +1,18 @@
+{
+  "name": "@rpc-dart/example-orpc-fastify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.ts",
+    "child": "node scripts/server-child.mjs"
+  },
+  "dependencies": {
+    "@orpc/contract": "1.16.3",
+    "@orpc/server": "1.16.3",
+    "@orpc/client": "1.16.3",
+    "fastify": "^5.0.0",
+    "jiti": "^2.6.0",
+    "zod": "^3.25.76"
+  }
+}

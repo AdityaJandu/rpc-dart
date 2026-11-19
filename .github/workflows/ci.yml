@@ -34,6 +34,8 @@ jobs:
         run: |
           (cd packages/dart/trpc_dart && dart pub get)
           (cd packages/dart/trpc_flutter && flutter pub get)
+          (cd packages/dart/orpc_dart && dart pub get)
+          (cd packages/dart/orpc_flutter && flutter pub get)
           (cd examples/flutter-app && flutter pub get)
 
       - name: TypeScript typecheck & build
@@ -42,19 +44,37 @@ jobs:
           pnpm -r typecheck
 
       - name: TypeScript & E2E test suites
-        run: pnpm -r test
+        run: pnpm -r --workspace-concurrency=1 test
+
+      - name: Dart & Flutter formatting
+        run: |
+          (cd packages/dart/trpc_dart && dart format --output=none --set-exit-if-changed .)
+          (cd packages/dart/trpc_flutter && dart format --output=none --set-exit-if-changed .)
+          (cd packages/dart/orpc_dart && dart format --output=none --set-exit-if-changed .)
+          (cd packages/dart/orpc_flutter && dart format --output=none --set-exit-if-changed .)
+          (cd examples/flutter-app && dart format --output=none --set-exit-if-changed lib test)
 
       - name: Dart & Flutter strict analysis
         run: |
           (cd packages/dart/trpc_dart && dart analyze --fatal-infos --fatal-warnings)
           (cd packages/dart/trpc_flutter && flutter analyze --fatal-infos --fatal-warnings)
+          (cd packages/dart/orpc_dart && dart analyze --fatal-infos --fatal-warnings)
+          (cd packages/dart/orpc_flutter && flutter analyze --fatal-infos --fatal-warnings)
           (cd examples/flutter-app && flutter analyze --fatal-infos --fatal-warnings)
 
       - name: Dart & Flutter test suites
         run: |
           (cd packages/dart/trpc_dart && dart test)
           (cd packages/dart/trpc_flutter && flutter test)
+          (cd packages/dart/orpc_dart && dart test)
+          (cd packages/dart/orpc_flutter && flutter test)
           (cd examples/flutter-app && flutter test)
+
+      - name: Dart documentation
+        run: |
+          (cd packages/dart/trpc_dart && dart doc --dry-run)
+          (cd packages/dart/orpc_dart && dart doc --dry-run)
+          (cd packages/dart/orpc_flutter && dart doc --dry-run)
 
       - name: Pre-release audit gate
         run: pnpm run audit:release

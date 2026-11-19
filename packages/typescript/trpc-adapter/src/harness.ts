@@ -1,5 +1,5 @@
 /**
- * Virtual type-harness generation.
+ * Virtual type-harness generation (tRPC-specific).
  * The harness imports ONLY the user's router and tRPC's public inference
  * utilities - never private internals. Per-path aliases force indexed-access
  * evaluation so deep conditional/mapped types resolve concretely, and make
@@ -10,16 +10,9 @@
  * tracked generators wrap each yield in `TrackedEnvelope<T>` ([id, data,
  * symbol]), so the aliases resolve straight to the streamed item type Y.
  */
-export function harnessFileName(): string {
-  return '__rpc_dart_harness__.ts';
-}
+import { pathAlias } from '@rpc-dart/core';
 
-export type HarnessAliasRole = 'in' | 'out' | 'tracked';
-
-export function pathAlias(path: string, role: HarnessAliasRole): string {
-  const segments = path.split('.').map((s) => s.replace(/[^A-Za-z0-9_]/g, '_'));
-  return ['__p', ...segments, role].join('_');
-}
+export { entryImportPath, harnessFileName, pathAlias, type HarnessAliasRole } from '@rpc-dart/core';
 
 export function buildHarness(
   entryImportPath: string,
@@ -73,27 +66,3 @@ type __rpc_dart_is_tracked<T> =
 ${aliases}
 `;
 }
-
-/** './router.ts' -> './router' (bundler-style), or explicit extensions under
- * node16/nodenext resolution, where extensionless relative imports are
- * illegal (TS5097) and the TS-standard specifiers (.js/.mjs/.cjs) resolve to
- * the .ts/.mts/.cts sources with or without allowImportingTsExtensions.
- */
-export function entryImportPath(
-  tsconfigDir: string,
-  entryAbsolute: string,
-  resolution?: 'node16' | 'nodenext',
-): string {
-  const rel = relative(tsconfigDir, entryAbsolute);
-  const specifier =
-    resolution === undefined
-      ? rel.replace(/\.(mts|cts|tsx?)$/, '')
-      : rel
-          .replace(/\.tsx$/, '.js')
-          .replace(/\.mts$/, '.mjs')
-          .replace(/\.cts$/, '.cjs')
-          .replace(/\.ts$/, '.js');
-  return specifier.startsWith('.') ? specifier : `./${specifier}`;
-}
-
-import { relative } from 'node:path';

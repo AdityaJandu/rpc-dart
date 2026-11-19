@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { extractContract, type ExtractPolicies } from '@rpc-dart/trpc-adapter';
+import type { ExtractPolicies } from '@rpc-dart/trpc-adapter';
+import { selectAdapter } from '../adapter.js';
 import type { GenerateOptions } from './generate.js';
 
 export interface CheckResult {
@@ -20,13 +21,8 @@ export async function checkContract(
   policies?: ExtractPolicies,
 ): Promise<CheckResult> {
   const problems: string[] = [];
-  const { ir } = await extractContract({
-    tsconfigPath: options.tsconfigPath,
-    entryFile: options.entryFile,
-    exportName: options.exportName,
-    protocol: { kind: 'trpc', version: '11', transformer: options.transformer ?? 'superjson' },
-    policies,
-  });
+  const adapter = await selectAdapter(options);
+  const { ir } = await adapter.extract({ ...options, policies });
 
   const manifestPath = path.join(options.outDir, MANIFEST_NAME);
   if (!existsSync(manifestPath)) {

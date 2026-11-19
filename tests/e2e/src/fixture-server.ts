@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { appRouter, createFixtureContext } from './fixture/trpc/router.js';
+import { binaryRouter } from './fixture/trpc-binary/router.js';
 
 export interface FixtureServer {
   port: number;
@@ -18,6 +19,10 @@ export async function startFixtureServer(): Promise<FixtureServer> {
           Array.isArray(req.headers.authorization) ? req.headers.authorization[0] : req.headers.authorization,
         ),
     },
+  });
+  await app.register(fastifyTRPCPlugin, {
+    prefix: '/trpc-binary',
+    trpcOptions: { router: binaryRouter },
   });
   await app.listen({ port: 0, host: '127.0.0.1' });
   const address = app.server.address();

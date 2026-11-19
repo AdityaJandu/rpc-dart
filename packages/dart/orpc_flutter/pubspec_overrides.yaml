@@ -1,0 +1,7 @@
+dependency_overrides:
+  orpc_dart:
+    path: ../orpc_dart
+  trpc_dart:
+    path: ../trpc_dart
+  trpc_flutter:
+    path: ../trpc_flutter

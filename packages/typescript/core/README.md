@@ -16,7 +16,7 @@ Part of the [rpc-dart](https://github.com/AdityaJandu/rpc-dart) monorepo.
 1. **Contract IR schemas:** Strongly-typed definitions for routers, procedures (queries, mutations, subscriptions), models, fields, enums, discriminated unions, and primitive types.
 2. **Canonical serialization:** Deterministic JSON serialization with key sorting, so identical contracts produce identical output independent of property insertion order.
 3. **Semantic IR hashing:** `computeIrHash` calculates a SHA-256 hash over semantic structure, skipping generator metadata and comments, powering change detection in watch mode and CI audits.
-4. **Structured diagnostics:** Diagnostic error and warning models (`Diagnostic`, `DiagnosticCode`) carrying procedure paths, line numbers, and actionable remediation tips.
+4. **Structured diagnostics:** Diagnostic error and warning models (`RpcDartDiagnostic`, `DiagnosticCode`) carrying procedure paths, line numbers, and actionable remediation tips.
 
 ---
 
@@ -34,13 +34,13 @@ pnpm add @rpc-dart/core
 
 ```typescript
 import {
-  type ContractIr,
-  type ProcedureIr,
-  type ModelIr,
-  type TypeDesc,
-  canonicalJsonStringify,
+  type ContractIR,
+  type ProcedureRecord,
+  type TypeDef,
+  type TypeRef,
+  stableStringify,
   computeIrHash,
-  type Diagnostic,
+  type RpcDartDiagnostic,
   DiagnosticCode,
 } from '@rpc-dart/core';
 ```

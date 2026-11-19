@@ -1,5 +1,5 @@
 import { watch, type FSWatcher } from 'node:fs';
-import { extractContract } from '@rpc-dart/trpc-adapter';
+import { selectAdapter } from '../adapter.js';
 import { generate, type GenerateOptions } from './generate.js';
 
 export interface WatchCycle {
@@ -70,13 +70,8 @@ export class WatchSession {
     this.running = true;
     const started = Date.now();
     try {
-      const { ir } = await extractContract({
-        tsconfigPath: this.options.tsconfigPath,
-        entryFile: this.options.entryFile,
-        exportName: this.options.exportName,
-        protocol: { kind: 'trpc', version: '11', transformer: this.options.transformer ?? 'superjson' },
-        policies: this.options.policies,
-      });
+      const adapter = await selectAdapter(this.options);
+      const { ir } = await adapter.extract(this.options);
       if (this.lastHash !== null && ir.hash === this.lastHash) {
         this.options.onCycle?.({
           changed: false,

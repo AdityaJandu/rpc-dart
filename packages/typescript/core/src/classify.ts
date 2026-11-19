@@ -5,8 +5,8 @@ import type {
   FieldDef,
   ObjectDef,
   TypeRef,
-} from '@rpc-dart/core';
-import type { RpcDartDiagnostic } from '@rpc-dart/core';
+} from './ir.js';
+import type { RpcDartDiagnostic } from './diagnostics.js';
 
 export class TypeClassificationError extends Error {
   readonly diagnostic: RpcDartDiagnostic;
@@ -169,6 +169,19 @@ export class TypeClassifier {
       const symbolName = symbol ? symbol.getName() : '';
 
       if (symbolName === 'Date') return 'Date';
+      if (symbolName === 'Uint8Array' || symbolName === 'ArrayBuffer' || symbolName === 'Buffer') return 'Bytes';
+      if (symbolName === 'File' || symbolName === 'Blob') return 'File';
+      if (symbolName === 'ReadableStream') {
+        const element = this.typeArgument(type, 0);
+        const elementSymbol = element?.getSymbol() ?? element?.aliasSymbol;
+        if (element && elementSymbol?.getName() === 'Uint8Array') return 'ByteStream';
+        throw fail(
+          'RPCDART0201',
+          `only ReadableStream<Uint8Array> can cross the wire at ${nameHint}`,
+          'stream binary chunks (Uint8Array) or restructure the output',
+          { procedurePath: this.currentProcedure },
+        );
+      }
       if (symbolName === 'Function') {
         throw fail(
           'RPCDART0201',

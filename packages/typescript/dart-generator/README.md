@@ -34,13 +34,12 @@ pnpm add @rpc-dart/dart-generator
 ## Usage
 
 ```typescript
-import { generateDartBindings } from '@rpc-dart/dart-generator';
+import { emit } from '@rpc-dart/dart-generator';
 
-const files = generateDartBindings(contract, {
-  outDir: './lib/src/api',
-});
+// `ir` is the ContractIR returned by an adapter's extractContract().
+const { files } = emit(ir, { packageName: 'my_app' }); // packageName is optional
 
-// files is an array of { path: string, content: string }
+// files is a Record<string, string>: relative POSIX path -> file content.
 ```
 
 ---

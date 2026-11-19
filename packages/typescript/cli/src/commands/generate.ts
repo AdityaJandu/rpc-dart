@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { extractContract } from '@rpc-dart/trpc-adapter';
+import { selectAdapter, type AdapterChoice } from '../adapter.js';
 import { emit } from '@rpc-dart/dart-generator';
 
 export interface GenerateOptions {
@@ -11,6 +11,7 @@ export interface GenerateOptions {
   exportName: string;
   /** Generated root, e.g. <consumer>/lib/src/api */
   outDir: string;
+  adapter?: AdapterChoice;
   transformer?: 'superjson' | 'json';
   force?: boolean;
   policies?: { unserializablePolicy?: 'error' | 'warn-dynamic' | 'skip-procedure' };
@@ -38,13 +39,8 @@ interface ManifestShape {
  * stale-file cleanup.
  */
 export async function generate(options: GenerateOptions): Promise<GenerateResult> {
-  const { ir, diagnostics } = await extractContract({
-    tsconfigPath: options.tsconfigPath,
-    entryFile: options.entryFile,
-    exportName: options.exportName,
-    protocol: { kind: 'trpc', version: '11', transformer: options.transformer ?? 'superjson' },
-    policies: options.policies,
-  });
+  const adapter = await selectAdapter(options);
+  const { ir, diagnostics } = await adapter.extract(options);
 
   const manifestPath = path.join(options.outDir, MANIFEST_NAME);
   const previous = existsSync(manifestPath)

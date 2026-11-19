@@ -1,6 +1,6 @@
 {
   "name": "@rpc-dart/dart-generator",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Deterministic Dart 3 code generator consuming the rpc-dart Contract IR.",
   "type": "module",
   "main": "dist/index.js",
@@ -20,6 +20,7 @@
     "typescript": "^5.9.0",
     "vitest": "^3.2.0",
     "@rpc-dart/trpc-adapter": "workspace:*",
+    "@rpc-dart/orpc-adapter": "workspace:*",
     "@types/node": "^24.0.0"
   },
   "license": "MIT",

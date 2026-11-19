@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'binary.dart';
 import 'codec.dart';
 import 'exceptions.dart';
 import 'query.dart';
@@ -26,6 +27,8 @@ class RpcCallContext {
     this.cancelToken,
     this.idempotencyKey,
     this.retryable = false,
+    this.onSendProgress,
+    this.onReceiveProgress,
   });
 
   /// Headers attached to this specific call.
@@ -42,6 +45,28 @@ class RpcCallContext {
 
   /// Explicit opt-in to retry a mutation without an idempotency key.
   final bool retryable;
+
+  /// Byte-progress callback for request body uploads.
+  final RpcProgressCallback? onSendProgress;
+
+  /// Byte-progress callback for response body downloads.
+  final RpcProgressCallback? onReceiveProgress;
+
+  /// Returns a copy with transfer progress callbacks attached; provided
+  /// callbacks win over existing ones, every other field is preserved.
+  RpcCallContext withProgress({
+    RpcProgressCallback? onSendProgress,
+    RpcProgressCallback? onReceiveProgress,
+  }) =>
+      RpcCallContext(
+        headers: headers,
+        timeout: timeout,
+        cancelToken: cancelToken,
+        idempotencyKey: idempotencyKey,
+        retryable: retryable,
+        onSendProgress: onSendProgress ?? this.onSendProgress,
+        onReceiveProgress: onReceiveProgress ?? this.onReceiveProgress,
+      );
 }
 
 /// Composable cancellation token. Cancelling a completed call is a no-op.
@@ -50,13 +75,18 @@ class CancelToken {
   CancelToken();
 
   final Completer<void> _completer = Completer<void>();
+  String? _reason;
 
   /// Whether cancellation has been triggered.
   bool get isCancelled => _completer.isCompleted;
 
+  /// The reason passed to [cancel], when provided.
+  String? get reason => _reason;
+
   /// Triggers cancellation of operations observing this token.
   void cancel({String? reason}) {
     if (!_completer.isCompleted) {
+      _reason = reason;
       _completer.complete();
     }
   }
@@ -104,6 +134,10 @@ class RpcRequest {
         headers: <String, String>{...base, name: value},
         timeout: context?.timeout,
         cancelToken: context?.cancelToken,
+        idempotencyKey: context?.idempotencyKey,
+        retryable: context?.retryable ?? false,
+        onSendProgress: context?.onSendProgress,
+        onReceiveProgress: context?.onReceiveProgress,
       ),
     );
   }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Binary type extraction: `Uint8Array` / `ArrayBuffer` / `Buffer` map to `Bytes`, `File` / `Blob` to `File`, `ReadableStream<Uint8Array>` to `ByteStream`.
+- Type classifier and compiler host moved to `@rpc-dart/core` (shared with `@rpc-dart/orpc-adapter`); behavior unchanged across all five tsconfig profiles.
+- `source.adapterVersion` and `generator.version` now report the real package version (previously stale constants).
+- Synchronized v0.3.0 lockstep release.
+
+
 ## 0.2.0
 
 - Subscription extraction: unwraps tRPC v11 async generators, `tracked()` envelopes, and observables down to the streamed item type; emits `supportsLastEventId` procedure metadata.

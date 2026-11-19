@@ -31,7 +31,7 @@ Add `trpc_dart` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.2.0
+  trpc_dart: ^0.3.0
 ```
 
 Then run:
@@ -66,7 +66,11 @@ void main() async {
       // Automatically refreshes tokens on 401 UNAUTHORIZED
       AuthLink(
         getHeaders: () async => {'authorization': 'Bearer my-token'},
-        onUnauthorized: () async => refreshSessionToken(),
+        // Return fresh headers, or null when the refresh updated what getHeaders reads.
+        onUnauthorized: () async {
+          await refreshSessionToken();
+          return null;
+        },
       ),
 
       // Terminal transport: coalesces calls into batched HTTP requests
@@ -121,7 +125,10 @@ final client = RpcClient(
     // 3. Authentication with single-flight refresh lock
     AuthLink(
       getHeaders: () async => {'authorization': 'Bearer $token'},
-      onUnauthorized: () async => authService.refreshToken(),
+      onUnauthorized: () async {
+        await authService.refreshToken();
+        return null; // or return a fresh header map
+      },
     ),
 
     // 4. Retry link: queries retry automatically; mutations only retry if idempotent
@@ -220,8 +227,9 @@ MIT © [Aditya Jandu](https://github.com/AdityaJandu)
 SSE and WebSocket transports with automatic reconnection and `tracked()` resume:
 
 ```dart
+final endpoint = Uri.parse('http://127.0.0.1:8787/trpc');
 final client = RpcClient(
-  endpoint: Uri.parse('http://127.0.0.1:8787/trpc'),
+  endpoint: endpoint,
   links: [
     SplitLink(
       unaryLink: HttpBatchLink(endpoint: endpoint),
@@ -238,3 +246,40 @@ final ticks = client.subscribe<Map<String, Object?>>(
 ```
 
 See [docs/guides/subscriptions.md](https://github.com/AdityaJandu/rpc-dart/blob/main/docs/guides/subscriptions.md) for the full guide.
+
+## oRPC transport & binary transfers
+
+`OrpcLink` speaks the oRPC RPCHandler/RPCLink wire (tested against oRPC
+1.16.3): `{json, meta}` envelopes with numeric meta tags, slash-delimited
+pathname routing, GET `?data=` queries, multipart uploads with indexed file
+maps, root-file and streaming downloads, and SSE event iterators with
+`last-event-id` resume. It composes with the same middleware links:
+
+```dart
+final endpoint = Uri.parse('https://api.example.com/rpc');
+final client = RpcClient(
+  endpoint: endpoint,
+  links: [AuthLink(getHeaders: loadCredentials), OrpcLink(endpoint: endpoint)],
+);
+```
+
+Binary primitives work on every platform (no `dart:io` in the library):
+
+```dart
+final receipt = await api.uploads.avatar.mutate(
+  UploadsAvatarInput(file: RpcFile.bytes('a.png', bytes, contentType: 'image/png')),
+  onSendProgress: (p) => print(p.fraction),
+);
+final file = await api.files.download.query(
+  onReceiveProgress: (p) => print('${p.transferredBytes}/${p.totalBytes}'),
+);
+await for (final chunk in api.files.stream.query()) { /* RpcByteStream */ }
+```
+
+`ORPCError` payloads map onto the typed exception hierarchy via
+`RpcException.fromOrpcWire` (`defined`, `code`, `status`, `message`, `data`).
+On tRPC, binary fields ride SuperJSON `registerCustom` annotations
+(`Uint8Array` base64, `File` `{name, type, data}`).
+
+See [docs/guides/orpc-quickstart.md](https://github.com/AdityaJandu/rpc-dart/blob/main/docs/guides/orpc-quickstart.md)
+and [docs/guides/file-transfers.md](https://github.com/AdityaJandu/rpc-dart/blob/main/docs/guides/file-transfers.md).

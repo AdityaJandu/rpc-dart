@@ -1,6 +1,6 @@
 # rpc-dart
 
-End-to-end type safety for tRPC v11 backends consumed from Dart and Flutter. The `rpc-dart` CLI reads your TypeScript router and generates plain, build-tool-free Dart bindings; the `trpc_dart` runtime calls your server over the real tRPC wire protocol with a composable link pipeline and a built-in, state-management-agnostic query cache.
+End-to-end type safety for tRPC v11 and oRPC backends consumed from Dart and Flutter. The `rpc-dart` CLI reads your TypeScript router and generates plain, build-tool-free Dart bindings; the `trpc_dart` runtime calls your server over the real tRPC and oRPC wire protocols with a composable link pipeline and a built-in, state-management-agnostic query cache.
 
 Rename a procedure or change a Zod field on the server: the Dart bindings regenerate in milliseconds and the Dart analyzer breaks at every stale call site. No route strings, no hand-written models, no `build_runner`, no `freezed`.
 
@@ -20,12 +20,15 @@ TypeScript router ──► rpc-dart CLI ──► generated Dart bindings ─�
 - **Real-time subscriptions.** Generated `.subscribe()` streams over SSE or WebSocket with `tracked()` resume, exponential-backoff reconnect, and single-flight auth refresh (`HttpSubscriptionLink`, `WsSubscriptionLink`, `SplitLink`).
 - **Composable middleware.** A link pipeline (`AuthLink`, `RetryLink`, `HttpBatchLink`, ...) with per-call context: headers, timeouts, cancellation, idempotency keys.
 - **Real protocol support.** HTTP batching with index-correlated responses, SuperJSON envelopes (`Date`, `BigInt`, `NaN`, ...), SSE subscriptions, the full tRPC error-code table as typed exceptions.
+- **oRPC support.** The `@rpc-dart/orpc-adapter` extracts `oc` contracts and `os` / `implement()` routers (Standard Schema v1: Zod, Valibot, ArkType), including handler-inferred outputs, `eventIterator` subscriptions, and `.errors()` typed error maps. `OrpcLink` speaks the RPCHandler wire: `{json, meta}` envelopes, multipart file maps, and SSE event iterators.
+- **Binary & file transfers.** `RpcFile`, `Uint8List`, and `RpcByteStream` flow end-to-end with `onSendProgress` / `onReceiveProgress` callbacks, cancellation, and zero casts — native multipart on oRPC, a SuperJSON `registerCustom` convention on tRPC.
 
 ## Quickstart
 
 ### 1. Backend: install the CLI
 
-Requires Node.js 20+ and a tRPC v11 router (with or without Zod).
+Requires Node.js 20+ and a tRPC v11 router or an oRPC contract/router (with or
+without Zod — oRPC accepts any Standard Schema v1 library: Zod, Valibot, ArkType).
 
 ```bash
 npm install --save-dev rpc-dart     # or: pnpm add -D rpc-dart
@@ -58,21 +61,29 @@ export { appRouter };
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.2.0          # pure Dart runtime (works on server, CLI, web, VM)
-  trpc_flutter: ^0.2.0       # optional: ValueListenable bridge for Flutter UIs
+  # tRPC backends:
+  trpc_dart: ^0.3.0          # pure Dart runtime (works on server, CLI, web, VM)
+  trpc_flutter: ^0.3.0       # optional: ValueListenable bridge for Flutter UIs
+  # oRPC backends — install the orpc_* facades instead:
+  orpc_dart: ^0.3.0          # oRPC runtime facade over trpc_dart (hides tRPC-only transports)
+  orpc_flutter: ^0.3.0       # optional: orpc_dart + the Flutter ValueListenable bridge
 ```
+
+oRPC clients install the `orpc_*` facades and import
+`package:orpc_dart/orpc_dart.dart`; the tRPC example below uses `trpc_dart`.
 
 ```dart
 import 'package:trpc_dart/trpc_dart.dart';
 import 'api/api.dart';                    // generated
 
+final endpoint = Uri.parse('https://api.example.com/trpc');
 final client = RpcClient(
-  endpoint: Uri.parse('https://api.example.com/trpc'),
+  endpoint: endpoint,
   transformer: RpcTransformer.superjson,  // match the server transformer
-  links: RpcLinkChain([
-    AuthLink(tokenProvider: myTokenProvider),
-    HttpBatchLink(),
-  ]),
+  links: [
+    AuthLink(getHeaders: () async => {'authorization': 'Bearer $token'}),
+    HttpBatchLink(endpoint: endpoint),
+  ],
 );
 
 final api = Api(client);                  // generated root
@@ -119,11 +130,12 @@ ValueListenableBuilder<RpcAsyncState<UserGetByIdOutput>>(
 );
 
 // Mutations refresh the cache explicitly — no string heuristics:
-final updated = await api.user.update.mutate(UpdateUserInput(
-  name: RpcPresent('Ada'),
+final updated = await api.user.update.mutate(UserUpdateInput(
+  name: 'Ada',
   nickname: const RpcNull(),               // explicit null on the wire
+  promoCode: 'PROMO2024',                  // required field
 ));
-api.invalidate(api.user.pathKey());        // refetches every watched query under 'user'
+api.invalidate(api.user.pathKey);          // refetches every watched query under 'user'
 ```
 
 ### BLoC / Cubit
@@ -139,7 +151,7 @@ class UserCubit extends Cubit<RpcAsyncState<UserGetByIdOutput>> {
 
   void watch() {
     // .watch() yields a Stream<RpcAsyncState<T>> that re-emits on invalidation.
-    _invalidationSub = _api.onInvalidate(_api.user.pathKey()).listen((_) {});
+    _invalidationSub = _api.onInvalidate(_api.user.pathKey).listen((_) {});
     _api.user.getById
         .watch(UserGetByIdInput(id: _userId))
         .stream
@@ -147,8 +159,8 @@ class UserCubit extends Cubit<RpcAsyncState<UserGetByIdOutput>> {
   }
 
   Future<void> rename(String name) async {
-    await _api.user.update.mutate(UpdateUserInput(name: RpcPresent(name)));
-    _api.invalidate(_api.user.pathKey());   // the watched cubit state refreshes itself
+    await _api.user.update.mutate(UserUpdateInput(name: name, promoCode: 'PROMO2024'));
+    _api.invalidate(_api.user.pathKey);   // the watched cubit state refreshes itself
   }
 
   @override
@@ -213,16 +225,15 @@ final userStateProvider = StreamProvider.autoDispose
 Requests flow through a composable chain. The last link is the transport.
 
 ```
-Api call → LoggingLink → AuthLink → ContextLink → RetryLink → TransformLink → HttpBatchLink
+Api call → LoggingLink → AuthLink → ContextLink → RetryLink → HttpBatchLink
 ```
 
 | Link | Responsibility |
 |---|---|
 | `AuthLink` | Resolves tokens asynchronously, attaches headers, performs single-flight token refresh: 10 concurrent 401s produce exactly one refresh, then replay |
-| `HttpBatchLink` | Terminal transport: coalesces same-tick calls into one HTTP request, splits oversized GET batches, demultiplexes index-correlated responses and per-item errors |
+| `HttpBatchLink` | Terminal transport: coalesces same-tick calls into one HTTP request, splits oversized GET batches, demultiplexes index-correlated responses and per-item errors, and encodes/decodes the SuperJSON envelope (`Date`, `BigInt`, `NaN`, ...) via its `transformer` param (matching `RpcClient.transformer`) |
 | `LoggingLink` | Structured logging with automatic redaction of `authorization`, cookies, and token-shaped payload keys |
 | `RetryLink` | Policy-driven retries: queries retry on network errors with exponential backoff; mutations never retry without an explicit idempotency key |
-| `TransformLink` | SuperJSON envelope encode/decode (`Date`, `BigInt`, `NaN`, ...) — inserted automatically to match `RpcClient.transformer` |
 
 Per-call overrides ride on `RpcCallContext` and never touch client configuration:
 
@@ -266,7 +277,7 @@ Full website-structured documentation lives in [docs/](docs/README.md):
 
 - [Getting started](docs/getting-started/installation.md) — installation, config, [quickstart](docs/getting-started/quickstart.md)
 - [Concepts](docs/README.md#table-of-contents) — how the compiler works, type mapping, links & auth
-- [Guides](docs/README.md#table-of-contents) — vanilla Flutter, BLoC, Provider, Riverpod, monorepo & CI
+- [Guides](docs/README.md#table-of-contents) — vanilla Flutter, BLoC, Provider, Riverpod, [oRPC quickstart](docs/guides/orpc-quickstart.md), [file & binary transfers](docs/guides/file-transfers.md), monorepo & CI
 - [Reference](docs/README.md#table-of-contents) — CLI reference, Dart runtime API, troubleshooting
 - [Roadmap](UPCOMING_TASKS.md) — shipped milestones and upcoming work
 

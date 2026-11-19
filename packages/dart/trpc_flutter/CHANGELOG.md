@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- Synchronized v0.3.0 lockstep release with `trpc_dart` 0.3.0 (oRPC transport, binary/multipart transfers, progress callbacks). No API changes in the Flutter bridge itself.
+
+
 ## 0.2.0
 
 - `RpcSubscriptionController<T>` + `RpcSubscriptionState<T>`: bind subscription streams to a `ValueListenable` with bounded history, status lifecycle, tracked-event id resume, and automatic query-cache prefix invalidation on incoming events.

@@ -1,4 +1,5 @@
 export { generate, type GenerateOptions, type GenerateResult } from './commands/generate.js';
+export { selectAdapter, type Adapter, type AdapterChoice, type AdapterExtractOptions } from './adapter.js';
 export { checkContract, type CheckResult } from './commands/check.js';
 export {
   diffContract,

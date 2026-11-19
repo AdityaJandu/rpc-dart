@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import * as ts from 'typescript';
 import {
@@ -8,10 +9,19 @@ import {
   type RpcDartDiagnostic,
   type TypeDef,
   ExtractionFailure,
+  TypeClassificationError,
+  TypeClassifier,
+  entryImportPath,
+  harnessFileName,
+  neutralizeOptions,
+  overlayHost,
+  pascal,
+  pathAlias,
+  resolutionKind,
+  typeFromAlias,
 } from '@rpc-dart/core';
-import { entryImportPath, buildHarness, harnessFileName, pathAlias } from './harness.js';
+import { buildHarness } from './harness.js';
 import { probeRouter } from './probe.js';
-import { pascal, TypeClassificationError, TypeClassifier } from './classify.js';
 
 export interface ExtractPolicies {
   /** Default: 'error'. 'warn-dynamic' emits unknown + records; 'skip-procedure' drops the procedure. */
@@ -31,7 +41,8 @@ export interface ExtractResult {
   diagnostics: RpcDartDiagnostic[];
 }
 
-const GENERATOR = { name: 'rpc-dart', version: '0.2.0' } as const;
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8')) as { version: string };
+const GENERATOR = { name: 'rpc-dart', version: pkg.version };
 
 export async function extractContract(options: ExtractOptions): Promise<ExtractResult> {
   const tsconfigDir = path.dirname(options.tsconfigPath);
@@ -68,12 +79,7 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
   const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, tsconfigDir);
 
   // 3. Virtual harness over the public inference utilities, one alias pair per path.
-  const resolution =
-    parsed.options.moduleResolution === ts.ModuleResolutionKind.Node16
-      ? ('node16' as const)
-      : parsed.options.moduleResolution === ts.ModuleResolutionKind.NodeNext
-        ? ('nodenext' as const)
-        : undefined;
+  const resolution = resolutionKind(ts, parsed.options.moduleResolution);
   const subscriptionPaths = new Set(
     probePaths.filter((p) => p.kind === 'subscription').map((p) => p.path),
   );
@@ -86,26 +92,9 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
   );
 
   // 4. Program under the user's own tsconfig, harness overlaid in memory.
-  //    Extraction-neutral overrides: the in-memory program exists only to
-  //    answer type queries on the harness, so build/lint-only flags are
-  //    neutralized regardless of the user's tsconfig — they would otherwise
-  //    reject the synthetic harness (rootDir, composite emit rules) or surface
-  //    lint-only semantic errors (noUnusedLocals/noUnusedParameters,
-  //    isolatedDeclarations) that have nothing to do with contract extraction.
-  const extractionOptions: ts.CompilerOptions = {
-    ...parsed.options,
-    noEmit: true,
-    declaration: false,
-    declarationMap: false,
-    composite: false,
-    incremental: false,
-    isolatedDeclarations: false,
-    noUnusedLocals: false,
-    noUnusedParameters: false,
-    rootDir: undefined,
-  };
+  const extractionOptions = neutralizeOptions(parsed.options);
   const baseHost = ts.createCompilerHost(extractionOptions, true);
-  const host = overlayHost(baseHost, harnessPath, harnessSource);
+  const host = overlayHost(ts, baseHost, harnessPath, harnessSource);
   const program = ts.createProgram({
     rootNames: [harnessPath, ...parsed.fileNames],
     options: extractionOptions,
@@ -152,8 +141,8 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
   const entries: AssembleEntry[] = [];
   for (const p of probePaths) {
     classifier.currentProcedure = p.path;
-    const inputType = typeFromAlias(harnessSf, checker, pathAlias(p.path, 'in'));
-    const outputType = typeFromAlias(harnessSf, checker, pathAlias(p.path, 'out'));
+    const inputType = typeFromAlias(ts, harnessSf, checker, pathAlias(p.path, 'in'));
+    const outputType = typeFromAlias(ts, harnessSf, checker, pathAlias(p.path, 'out'));
     if (outputType === undefined) {
       diagnostics.push({
         code: 'RPCDART0106',
@@ -200,7 +189,7 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
     if (p.kind === 'subscription') {
       // `tracked()` yields resolve to a true literal via the harness; without
       // tracked events the client cannot resume, so the flag stays false.
-      const trackedType = typeFromAlias(harnessSf, checker, pathAlias(p.path, 'tracked'));
+      const trackedType = typeFromAlias(ts, harnessSf, checker, pathAlias(p.path, 'tracked'));
       meta.extra['supportsLastEventId'] =
         trackedType !== undefined && checker.typeToString(trackedType) === 'true';
     }
@@ -216,7 +205,7 @@ export async function extractContract(options: ExtractOptions): Promise<ExtractR
       entryFile: options.entryFile,
       exportName: options.exportName,
       tsconfigFile: options.tsconfigPath,
-      adapterVersion: '0.1.0',
+      adapterVersion: pkg.version,
     },
     entries,
   });
@@ -228,44 +217,4 @@ function isVoidish(type: ts.Type): boolean {
   return (
     (type.flags & (ts.TypeFlags.Void | ts.TypeFlags.Undefined | ts.TypeFlags.Never)) !== 0
   );
-}
-
-function typeFromAlias(
-  sourceFile: ts.SourceFile,
-  checker: ts.TypeChecker,
-  name: string,
-): ts.Type | undefined {
-  for (const statement of sourceFile.statements) {
-    if (ts.isTypeAliasDeclaration(statement) && statement.name.text === name) {
-      return checker.getTypeFromTypeNode(statement.type);
-    }
-  }
-  return undefined;
-}
-
-function overlayHost(
-  base: ts.CompilerHost,
-  harnessPath: string,
-  harnessSource: string,
-): ts.CompilerHost {
-  const cache = new Map<string, ts.SourceFile>();
-  return {
-    ...base,
-    fileExists(name) {
-      return name === harnessPath || base.fileExists(name);
-    },
-    readFile(name) {
-      return name === harnessPath ? harnessSource : base.readFile(name);
-    },
-    getSourceFile(name, languageVersion, onError, shouldCreate) {
-      if (name === harnessPath) {
-        const cached = cache.get(name);
-        if (cached) return cached;
-        const sf = ts.createSourceFile(name, harnessSource, languageVersion, true);
-        cache.set(name, sf);
-        return sf;
-      }
-      return base.getSourceFile(name, languageVersion, onError, shouldCreate);
-    },
-  };
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0
+
+- oRPC transport: `OrpcLink` speaks the RPCHandler/RPCLink wire — slash-delimited pathname routing, `{json, meta}` envelopes with oRPC 1.x numeric tags (string tags decoded for 2.x compatibility), GET `?data=` queries with POST fallback, multipart uploads with indexed file maps, root-file and nested-file multipart responses, headerless binary passthrough, and SSE event-iterator streaming (`message`/`done`/`error`, keepalive comments, `last-event-id` resume).
+- Binary primitives: `RpcFile` (bytes or streaming sources), `RpcTransferProgress` (`transferredBytes`, `totalBytes`, `fraction`), `RpcByteStream`, and `onSendProgress` / `onReceiveProgress` on `RpcCallContext`. Platform-neutral (`dart:typed_data` only); no new dependencies.
+- `RpcException.fromOrpcWire` maps ORPCError payloads (`defined`, `code`, `status`, `message`, `data`) onto the existing typed hierarchy; additive `defined` field; non-map `data` preserved under `{'value': data}`.
+- `RpcJson.asBytes` / `asFile` / `asByteStream` zero-cast readers.
+- tRPC binary convention: superjson `registerCustom` annotations `['custom', 'Uint8Array']` (base64) and `['custom', 'File']` (`{name, type, data}`), with correct root/nested annotation wrapping.
+- `LoggingLink.logPayloads` opt-in summaries via `rpcSummarizePayload` — binary nodes render as bounded size summaries, never raw bytes.
+- Fixes: `RpcRequest.withAddedHeader` preserves `idempotencyKey`, `retryable`, and progress callbacks; `CancelToken.cancel(reason)` exposes `reason`.
+- Synchronized v0.3.0 lockstep release.
+
+
 ## 0.2.0
 
 - Real-time subscriptions: `HttpSubscriptionLink` (SSE, tRPC `httpSubscriptionLink`-compatible) and `WsSubscriptionLink` (multiplexed WebSocket, `applyWSSHandler`-compatible) with an injectable WebSocket connector.

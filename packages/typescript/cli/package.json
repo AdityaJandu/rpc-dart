@@ -1,6 +1,6 @@
 {
   "name": "rpc-dart",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "TypeScript-to-Dart bindings generator for tRPC v11 backends.",
   "type": "module",
   "main": "dist/index.js",
@@ -20,6 +20,7 @@
   "dependencies": {
     "@rpc-dart/core": "workspace:*",
     "@rpc-dart/trpc-adapter": "workspace:*",
+    "@rpc-dart/orpc-adapter": "workspace:*",
     "@rpc-dart/dart-generator": "workspace:*",
     "jiti": "^2.6.0"
   },

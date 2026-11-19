@@ -131,6 +131,20 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.17.0"
+  orpc_dart:
+    dependency: "direct main"
+    description:
+      path: "../../packages/dart/orpc_dart"
+      relative: true
+    source: path
+    version: "0.3.0"
+  orpc_flutter:
+    dependency: "direct main"
+    description:
+      path: "../../packages/dart/orpc_flutter"
+      relative: true
+    source: path
+    version: "0.3.0"
   path:
     dependency: transitive
     description:
@@ -198,14 +212,14 @@ packages:
       path: "../../packages/dart/trpc_dart"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   trpc_flutter:
     dependency: "direct main"
     description:
       path: "../../packages/dart/trpc_flutter"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   typed_data:
     dependency: transitive
     description:

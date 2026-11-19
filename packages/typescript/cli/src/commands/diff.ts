@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { stableStringify, type ContractIR, type FieldDef, type TypeDef } from '@rpc-dart/core';
-import { extractContract } from '@rpc-dart/trpc-adapter';
+import { selectAdapter, type AdapterChoice } from '../adapter.js';
 
 export interface DiffEntry {
   kind:
@@ -35,6 +35,7 @@ export interface DiffOptions {
   tsconfigPath: string;
   entryFile: string;
   exportName: string;
+  adapter?: AdapterChoice;
   transformer?: 'superjson' | 'json';
   /** Path to a committed full-IR snapshot (written by --update-baseline). */
   baselinePath: string;
@@ -43,12 +44,8 @@ export interface DiffOptions {
 
 /** Compares the current contract against a committed IR snapshot. */
 export async function diffContract(options: DiffOptions): Promise<DiffResult> {
-  const { ir: current } = await extractContract({
-    tsconfigPath: options.tsconfigPath,
-    entryFile: options.entryFile,
-    exportName: options.exportName,
-    protocol: { kind: 'trpc', version: '11', transformer: options.transformer ?? 'superjson' },
-  });
+  const adapter = await selectAdapter(options);
+  const { ir: current } = await adapter.extract(options);
 
   if (options.updateBaseline || !existsSync(options.baselinePath)) {
     if (!options.updateBaseline) {

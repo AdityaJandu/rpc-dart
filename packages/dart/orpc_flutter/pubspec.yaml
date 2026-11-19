@@ -1,0 +1,23 @@
+name: orpc_flutter
+description: Flutter bridge for oRPC clients - ValueListenable over cache-backed queries and real-time subscription controllers.
+version: 0.3.0
+homepage: https://github.com/AdityaJandu/rpc-dart
+repository: https://github.com/AdityaJandu/rpc-dart
+issue_tracker: https://github.com/AdityaJandu/rpc-dart/issues
+topics:
+  - orpc
+  - flutter
+  - state-management
+  - query
+  - client
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  orpc_dart: ^0.3.0
+  trpc_flutter: ^0.3.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^5.0.0

@@ -11,6 +11,7 @@ class RpcException implements Exception {
     this.path,
     this.data,
     this.cause,
+    this.defined = false,
   });
 
   /// Human-readable error description.
@@ -31,6 +32,73 @@ class RpcException implements Exception {
 
   /// Underlying cause if wrapped.
   final Object? cause;
+
+  /// Whether the error was declared via oRPC `.errors({...})` (wire `defined`).
+  final bool defined;
+
+  /// Single decode point for oRPC `ORPCError` wire payloads
+  /// (`{defined, code, status, message, data}`). Non-map `data` is preserved
+  /// under `{'value': data}`.
+  factory RpcException.fromOrpcWire(Map<String, Object?> json) {
+    final message = switch (json['message']) {
+      final String m => m,
+      _ => 'unknown error',
+    };
+    final code = switch (json['code']) {
+      final String c => c,
+      _ => 'UNKNOWN',
+    };
+    final httpStatus = switch (json['status']) {
+      final int h => h,
+      _ => null,
+    };
+    final defined = json['defined'] == true;
+    final data = switch (json['data']) {
+      final Map<String, Object?> d => d,
+      null => null,
+      final other => <String, Object?>{'value': other},
+    };
+    return switch (code) {
+      'BAD_REQUEST' => RpcBadRequestException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'UNAUTHORIZED' => RpcUnauthorizedException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'FORBIDDEN' => RpcForbiddenException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'NOT_FOUND' => RpcNotFoundException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'METHOD_NOT_SUPPORTED' => RpcMethodNotSupportedException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'TIMEOUT' => RpcTimeoutException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'CONFLICT' => RpcConflictException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'PRECONDITION_FAILED' => RpcPreconditionFailedException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'PAYLOAD_TOO_LARGE' => RpcPayloadTooLargeException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'UNSUPPORTED_MEDIA_TYPE' => RpcUnsupportedMediaTypeException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'UNPROCESSABLE_CONTENT' => RpcUnprocessableContentException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'TOO_MANY_REQUESTS' => RpcTooManyRequestsException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'CLIENT_CLOSED_REQUEST' => RpcClientClosedRequestException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'NOT_IMPLEMENTED' => RpcNotImplementedException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'INTERNAL_SERVER_ERROR' => RpcInternalServerException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'BAD_GATEWAY' => RpcBadGatewayException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'SERVICE_UNAVAILABLE' => RpcServiceUnavailableException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      'GATEWAY_TIMEOUT' => RpcGatewayTimeoutException(message,
+          httpStatus: httpStatus, data: data, defined: defined),
+      _ => RpcException(message,
+          code: code, httpStatus: httpStatus, data: data, defined: defined),
+    };
+  }
 
   /// Single decode point for wire error envelopes
   /// (`{message, code, data:{code, httpStatus, path, stack?, zodError?}}`).
@@ -138,6 +206,7 @@ class RpcBadRequestException extends RpcException {
     super.httpStatus,
     super.path,
     super.data,
+    super.defined,
     this.fieldErrors = const {},
   }) : super(code: 'BAD_REQUEST');
 
@@ -149,7 +218,7 @@ class RpcBadRequestException extends RpcException {
 class RpcUnauthorizedException extends RpcException {
   /// Creates an unauthorized exception.
   RpcUnauthorizedException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'UNAUTHORIZED');
 }
 
@@ -157,7 +226,7 @@ class RpcUnauthorizedException extends RpcException {
 class RpcForbiddenException extends RpcException {
   /// Creates a forbidden exception.
   RpcForbiddenException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'FORBIDDEN');
 }
 
@@ -165,7 +234,7 @@ class RpcForbiddenException extends RpcException {
 class RpcNotFoundException extends RpcException {
   /// Creates a not found exception.
   RpcNotFoundException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'NOT_FOUND');
 }
 
@@ -173,14 +242,15 @@ class RpcNotFoundException extends RpcException {
 class RpcMethodNotSupportedException extends RpcException {
   /// Creates a method not supported exception.
   RpcMethodNotSupportedException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'METHOD_NOT_SUPPORTED');
 }
 
 /// Thrown when the server responds with TIMEOUT or a client call deadline expires.
 class RpcTimeoutException extends RpcException {
   /// Creates a timeout exception.
-  RpcTimeoutException(super.message, {super.httpStatus, super.path, super.data})
+  RpcTimeoutException(super.message,
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'TIMEOUT');
 }
 
@@ -188,7 +258,7 @@ class RpcTimeoutException extends RpcException {
 class RpcConflictException extends RpcException {
   /// Creates a conflict exception.
   RpcConflictException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'CONFLICT');
 }
 
@@ -196,7 +266,7 @@ class RpcConflictException extends RpcException {
 class RpcPreconditionFailedException extends RpcException {
   /// Creates a precondition failed exception.
   RpcPreconditionFailedException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'PRECONDITION_FAILED');
 }
 
@@ -204,7 +274,7 @@ class RpcPreconditionFailedException extends RpcException {
 class RpcPreconditionRequiredException extends RpcException {
   /// Creates a precondition required exception.
   RpcPreconditionRequiredException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'PRECONDITION_REQUIRED');
 }
 
@@ -212,7 +282,7 @@ class RpcPreconditionRequiredException extends RpcException {
 class RpcPayloadTooLargeException extends RpcException {
   /// Creates a payload too large exception.
   RpcPayloadTooLargeException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'PAYLOAD_TOO_LARGE');
 }
 
@@ -220,7 +290,7 @@ class RpcPayloadTooLargeException extends RpcException {
 class RpcUnsupportedMediaTypeException extends RpcException {
   /// Creates an unsupported media type exception.
   RpcUnsupportedMediaTypeException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'UNSUPPORTED_MEDIA_TYPE');
 }
 
@@ -228,7 +298,7 @@ class RpcUnsupportedMediaTypeException extends RpcException {
 class RpcUnprocessableContentException extends RpcException {
   /// Creates an unprocessable content exception.
   RpcUnprocessableContentException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'UNPROCESSABLE_CONTENT');
 }
 
@@ -236,7 +306,7 @@ class RpcUnprocessableContentException extends RpcException {
 class RpcTooManyRequestsException extends RpcException {
   /// Creates a too many requests exception.
   RpcTooManyRequestsException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'TOO_MANY_REQUESTS');
 }
 
@@ -244,7 +314,7 @@ class RpcTooManyRequestsException extends RpcException {
 class RpcClientClosedRequestException extends RpcException {
   /// Creates a client closed request exception.
   RpcClientClosedRequestException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'CLIENT_CLOSED_REQUEST');
 }
 
@@ -252,7 +322,7 @@ class RpcClientClosedRequestException extends RpcException {
 class RpcPaymentRequiredException extends RpcException {
   /// Creates a payment required exception.
   RpcPaymentRequiredException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'PAYMENT_REQUIRED');
 }
 
@@ -260,7 +330,7 @@ class RpcPaymentRequiredException extends RpcException {
 class RpcNotImplementedException extends RpcException {
   /// Creates a not implemented exception.
   RpcNotImplementedException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'NOT_IMPLEMENTED');
 }
 
@@ -268,7 +338,7 @@ class RpcNotImplementedException extends RpcException {
 class RpcInternalServerException extends RpcException {
   /// Creates an internal server error exception.
   RpcInternalServerException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'INTERNAL_SERVER_ERROR');
 }
 
@@ -276,7 +346,7 @@ class RpcInternalServerException extends RpcException {
 class RpcBadGatewayException extends RpcException {
   /// Creates a bad gateway exception.
   RpcBadGatewayException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'BAD_GATEWAY');
 }
 
@@ -284,7 +354,7 @@ class RpcBadGatewayException extends RpcException {
 class RpcServiceUnavailableException extends RpcException {
   /// Creates a service unavailable exception.
   RpcServiceUnavailableException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'SERVICE_UNAVAILABLE');
 }
 
@@ -292,7 +362,7 @@ class RpcServiceUnavailableException extends RpcException {
 class RpcGatewayTimeoutException extends RpcException {
   /// Creates a gateway timeout exception.
   RpcGatewayTimeoutException(super.message,
-      {super.httpStatus, super.path, super.data})
+      {super.httpStatus, super.path, super.data, super.defined})
       : super(code: 'GATEWAY_TIMEOUT');
 }
 

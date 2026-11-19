@@ -40,7 +40,7 @@ jobs:
 
       - name: Publish to npm with provenance (idempotent)
         run: |
-          for dir in "packages/typescript/core" "packages/typescript/trpc-adapter" "packages/typescript/dart-generator" "packages/typescript/cli"; do
+          for dir in "packages/typescript/core" "packages/typescript/trpc-adapter" "packages/typescript/orpc-adapter" "packages/typescript/dart-generator" "packages/typescript/cli"; do
             pkg=$(node -p "require('./${dir}/package.json').name")
             VER=$(node -p "require('./${dir}/package.json').version")
             if npm view "${pkg}@${VER}" version >/dev/null 2>&1; then
@@ -83,23 +83,41 @@ jobs:
 
           VER=$(node -p "require('./packages/typescript/core/package.json').version")
 
-          if curl -fsSL "https://pub.dev/api/packages/trpc_dart/versions/${VER}" >/dev/null 2>&1; then
+          exists() { curl -fsSL "https://pub.dev/api/packages/$1/versions/${VER}" >/dev/null 2>&1; }
+          wait_for() {
+            for attempt in $(seq 1 24); do
+              if exists "$1"; then return 0; fi
+              echo "Waiting for $1@${VER} to propagate on pub.dev CDN (attempt ${attempt}/24)..."
+              sleep 10
+            done
+            echo "Timed out waiting for $1@${VER}"; return 1
+          }
+
+          # 1. Engine first: trpc_dart has no sibling dependencies.
+          if exists trpc_dart; then
             echo "✓ trpc_dart@${VER} is already published on pub.dev — skipping"
           else
             (cd packages/dart/trpc_dart && dart pub get && dart pub publish --force)
           fi
+          wait_for trpc_dart
 
-          if curl -fsSL "https://pub.dev/api/packages/trpc_flutter/versions/${VER}" >/dev/null 2>&1; then
+          # 2. trpc_flutter and orpc_dart depend only on trpc_dart.
+          if exists trpc_flutter; then
             echo "✓ trpc_flutter@${VER} is already published on pub.dev — skipping"
           else
-            cd packages/dart/trpc_flutter
-            for attempt in $(seq 1 24); do
-              if flutter pub get; then
-                break
-              fi
-              echo "Waiting for trpc_dart@${VER} to propagate on pub.dev CDN (attempt ${attempt}/24)..."
-              sleep 10
-            done
-            git checkout -- analysis_options.yaml 2>/dev/null || true
-            dart pub publish --force
+            (cd packages/dart/trpc_flutter && flutter pub get && { git checkout -- analysis_options.yaml 2>/dev/null || true; } && dart pub publish --force)
+          fi
+          if exists orpc_dart; then
+            echo "✓ orpc_dart@${VER} is already published on pub.dev — skipping"
+          else
+            (cd packages/dart/orpc_dart && dart pub get && dart pub publish --force)
+          fi
+          wait_for trpc_flutter
+          wait_for orpc_dart
+
+          # 3. orpc_flutter depends on orpc_dart and trpc_flutter.
+          if exists orpc_flutter; then
+            echo "✓ orpc_flutter@${VER} is already published on pub.dev — skipping"
+          else
+            (cd packages/dart/orpc_flutter && flutter pub get && { git checkout -- analysis_options.yaml 2>/dev/null || true; } && dart pub publish --force)
           fi

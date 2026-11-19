@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import type {
   ContractIR,
   DiscriminatedUnionDef,
@@ -26,9 +27,12 @@ export interface EmitResult {
   files: Record<string, string>;
 }
 
-const RUNTIME_PACKAGE = 'trpc_dart';
+function runtimePackage(em: Emitter): string {
+  return em.ir.protocol.kind === 'orpc' ? 'orpc_dart' : 'trpc_dart';
+}
 
-const GENERATOR_VERSION = '0.2.0';
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8')) as { version: string };
+const GENERATOR_VERSION = pkg.version;
 const MODEL_DIR = 'lib/src/api/models';
 const PROC_DIR = 'lib/src/api/procedures';
 const ROUTER_DIR = 'lib/src/api/routers';
@@ -91,10 +95,18 @@ function primitiveDart(primitive: string): string {
       return 'BigInt';
     case 'JsonValue':
       return 'JsonValue';
+    case 'Bytes':
+      return 'Uint8List';
+    case 'File':
+      return 'RpcFile';
+    case 'ByteStream':
+      return 'RpcByteStream';
     default:
       return 'Object?';
   }
 }
+
+const BINARY_PRIMITIVES = new Set(['Bytes', 'File', 'ByteStream']);
 
 /** Zero-cast decoder expression for a stream item of [type]. */
 function decodeExprFor(em: Emitter, f: FileCtx, type: TypeRef): string {
@@ -121,6 +133,12 @@ function decodeExprFor(em: Emitter, f: FileCtx, type: TypeRef): string {
       case 'BigInt':
         f.trpcSymbols.add('RpcJson');
         return 'RpcJson.asBigInt';
+      case 'Bytes':
+        f.trpcSymbols.add('RpcJson');
+        return 'RpcJson.asBytes';
+      case 'File':
+        f.trpcSymbols.add('RpcJson');
+        return 'RpcJson.asFile';
       case 'void':
       case 'never':
         return "(value) => throw StateError('subscription never yields events')";
@@ -132,7 +150,10 @@ function decodeExprFor(em: Emitter, f: FileCtx, type: TypeRef): string {
 }
 
 function dartTypeOf(em: Emitter, f: FileCtx, type: TypeRef): string {
-  if (typeof type === 'string') return primitiveDart(type);
+  if (typeof type === 'string') {
+    if (BINARY_PRIMITIVES.has(type)) f.trpcSymbols.add(type);
+    return primitiveDart(type);
+  }
   if (isRef(type)) {
     const def = defByRef(em, type);
     f.modelNames.add(namedName(def));
@@ -158,14 +179,18 @@ function dartTypeOf(em: Emitter, f: FileCtx, type: TypeRef): string {
       f.trpcSymbols.add('JsonValue');
       return 'JsonValue';
     case 'literal':
-      return 'Object?';
+      return typeof type.value === 'boolean'
+        ? 'bool'
+        : typeof type.value === 'number'
+          ? 'double'
+          : 'String';
     default:
       return 'Object?';
   }
 }
 
 function isCollectionish(em: Emitter, type: TypeRef): boolean {
-  if (typeof type === 'string') return false;
+  if (typeof type === 'string') return type === 'Bytes';
   if (isRef(type)) {
     const def = em.registry[type.$ref];
     if (!def) return false;
@@ -192,6 +217,12 @@ function decoderFor(em: Emitter, f: FileCtx, type: TypeRef): string {
         return 'RpcJson.asDateTime';
       case 'BigInt':
         return 'RpcJson.asBigInt';
+      case 'Bytes':
+        return 'RpcJson.asBytes';
+      case 'File':
+        return 'RpcJson.asFile';
+      case 'ByteStream':
+        return 'RpcJson.asByteStream';
       case 'JsonValue':
         return 'JsonValue.fromJsonOf';
       default:
@@ -235,6 +266,12 @@ function decoderFor(em: Emitter, f: FileCtx, type: TypeRef): string {
     case 'unknown':
       f.trpcSymbols.add('JsonValue');
       return 'JsonValue.fromJsonOf';
+    case 'literal':
+      return typeof type.value === 'boolean'
+        ? 'RpcJson.asBool'
+        : typeof type.value === 'number'
+          ? 'RpcJson.asDouble'
+          : 'RpcJson.asString';
     default:
       throw new Error(`no decoder for kind ${type.kind}`);
   }
@@ -503,6 +540,66 @@ function sanitizeEnumValue(value: string): string {
   return `value_${value.replace(/[^a-zA-Z0-9]/g, '_')}`;
 }
 
+function isErrorUnion(em: Emitter, def: DiscriminatedUnionDef): boolean {
+  for (const path of em.ir.procedurePaths) {
+    const err = em.ir.procedures[path]!.error;
+    if (err && isRef(err) && namedName(defByRef(em, err)) === def.name) return true;
+  }
+  return false;
+}
+
+function isMapShapedType(em: Emitter, type: TypeRef): boolean {
+  if (typeof type === 'string') return false;
+  const def = isRef(type) ? defByRef(em, type) : type;
+  if (def.kind === 'nullable') return isMapShapedType(em, def.inner);
+  return def.kind === 'object' || def.kind === 'discriminatedUnion' ||
+    def.kind === 'record' || def.kind === 'unknown';
+}
+
+function errorDataExpr(em: Emitter, f: FileCtx, type: TypeRef): string {
+  const decoder = decoderFor(em, f, type);
+  // fromOrpcWire wraps non-map error data under {'value': ...}.
+  const source = isMapShapedType(em, type) ? 'error.data' : "error.data!['value']";
+  return `error.data == null ? null : ${decoder}(${source}, r'$.data')`;
+}
+
+function renderFromException(em: Emitter, f: FileCtx, def: DiscriminatedUnionDef): void {
+  f.trpcSymbols.add('RpcException');
+  add(f, '  /// Decodes a defined oRPC error carried by [error] into its typed variant.');
+  add(f, '  /// Returns null for non-defined errors (network, transport, undefined server errors).');
+  add(f, `  static ${def.name}? fromException(RpcException error) {`);
+  add(f, '    if (!error.defined) return null;');
+  add(f, '    switch (error.code) {');
+  for (const variant of def.variants) {
+    const variantDef = defByRef(em, variant.object) as ObjectDef;
+    const variantName = namedName(variantDef);
+    add(f, `      case ${JSON.stringify(variant.tag)}:`);
+    add(f, `        return ${variantName}(`);
+    for (const fl of variantDef.fields.filter((x) => x.name !== def.tagField)) {
+      const n = fieldName(fl.name);
+      if (fl.name === 'message') {
+        add(f, `          ${n}: error.message,`);
+      } else if (fl.name === 'defined') {
+        add(f, `          ${n}: error.defined,`);
+      } else if (fl.name === 'data') {
+        add(f, `          ${n}: ${errorDataExpr(em, f, fl.type)},`);
+      } else {
+        add(f, `          ${n}: ${decoderFor(em, f, fl.type)}(error.data?[${JSON.stringify(fl.wireName)}], r'$.${fl.wireName}'),`);
+      }
+    }
+    add(f, '        );');
+  }
+  add(f, '      default:');
+  add(f, `        return ${def.name}Unknown(<String, Object?>{`);
+  add(f, "          'code': error.code,");
+  add(f, "          'message': error.message,");
+  add(f, "          'defined': error.defined,");
+  add(f, "          if (error.data != null) 'data': error.data,");
+  add(f, '        });');
+  add(f, '    }');
+  add(f, '  }');
+}
+
 function renderUnion(em: Emitter, def: DiscriminatedUnionDef): FileCtx {
   const f = newFile();
   f.trpcSymbols.add('rpcDeepEquals');
@@ -522,6 +619,10 @@ function renderUnion(em: Emitter, def: DiscriminatedUnionDef): FileCtx {
   add(f);
   add(f, `  static ${def.name} fromJsonOf(Object? value, String path) =>`);
   add(f, `      ${def.name}.fromJson(RpcJson.asMap(value, path));`);
+  if (isErrorUnion(em, def)) {
+    add(f);
+    renderFromException(em, f, def);
+  }
   add(f, '}');
   add(f);
   for (const variant of def.variants) {
@@ -606,13 +707,18 @@ function renderVariant(em: Emitter, f: FileCtx, union: DiscriminatedUnionDef, va
   add(f, `  String toString() => '${className}(${fields.map((fl) => `${fieldName(fl.name)}: $${fieldName(fl.name)}`).join(', ')})';`);
   add(f);
   add(f, '  @override');
-  add(f, '  Map<String, Object?> toJson() => {');
-  add(f, `        ${JSON.stringify(union.tagField)}: ${JSON.stringify(union.variants.find((v) => namedName(defByRef(em, v.object)) === className)!.tag)},`);
-  for (let i = 0; i < fields.length; i++) {
-    const fl = fields[i]!;
-    add(f, `        ${JSON.stringify(fl.wireName)}: ${encodeValue(em, f, fieldName(fl.name), fl.type)},`);
+  add(f, '  Map<String, Object?> toJson() {');
+  add(f, '    final json = <String, Object?>{');
+  add(f, `      ${JSON.stringify(union.tagField)}: ${JSON.stringify(union.variants.find((v) => namedName(defByRef(em, v.object)) === className)!.tag)},`);
+  for (const p of plans) {
+    if (p.toJsonEntry !== null) add(f, `      ${p.toJsonEntry}`);
   }
-  add(f, '      };');
+  add(f, '    };');
+  for (const p of plans) {
+    for (const statement of p.toJsonStatements) add(f, `    ${statement}`);
+  }
+  add(f, '    return json;');
+  add(f, '  }');
   add(f, '}');
   add(f);
 }
@@ -631,14 +737,21 @@ function renderProcedure(em: Emitter, path: string): FileCtx {
   const record = em.ir.procedures[path]!;
   const kind = record.kind;
   const hasInput = record.input !== null;
-  const inputName = hasInput ? namedName(defByRef(em, record.input!)) : null;
+  const inputIsBinary = record.input === 'Bytes' || record.input === 'File';
+  const inputName = hasInput
+    ? inputIsBinary
+      ? primitiveDart(record.input as string)
+      : namedName(defByRef(em, record.input!))
+    : null;
+  if (hasInput && inputIsBinary) f.trpcSymbols.add(inputName!);
   const segments = path.split('.');
   const isQuery = kind === 'query';
   const isSubscription = kind === 'subscription';
+  const inputArg = hasInput ? (inputIsBinary ? 'input,' : 'input.toJson(),') : 'null,';
 
   if (isSubscription) {
     f.trpcSymbols.add('RpcSubscriptionOptions');
-    if (hasInput) f.modelNames.add(inputName!);
+    if (hasInput && !inputIsBinary) f.modelNames.add(inputName!);
     const elementDart = dartTypeOf(em, f, record.output);
     add(f, `class ${procClassName(path)} {`);
     add(f, `  const ${procClassName(path)}(this._client);`);
@@ -651,7 +764,7 @@ function renderProcedure(em: Emitter, path: string): FileCtx {
       add(f, `  Stream<${elementDart}> subscribe(${inputName} input, {RpcSubscriptionOptions? options}) {`);
       add(f, `    return _client.subscribe<${elementDart}>(`);
       add(f, '      path: path,');
-      add(f, '      input: input.toJson(),');
+      add(f, `      input: ${inputArg}`);
     } else {
       add(f, `  Stream<${elementDart}> subscribe({RpcSubscriptionOptions? options}) {`);
       add(f, `    return _client.subscribe<${elementDart}>(`);
@@ -666,20 +779,55 @@ function renderProcedure(em: Emitter, path: string): FileCtx {
     return f;
   }
 
-  const outputName = namedName(defByRef(em, record.output));
-
-  if (hasInput) f.modelNames.add(inputName!);
-  f.modelNames.add(outputName);
+  const outputIsStream = record.output === 'ByteStream';
+  const outputIsBinary = record.output === 'Bytes' || record.output === 'File';
+  const outputDart = dartTypeOf(em, f, record.output);
+  if (hasInput && !inputIsBinary) f.modelNames.add(inputName!);
   const callMethod = isQuery ? 'query' : 'mutate';
   const safeMethod = isQuery ? 'safeQuery' : 'safeMutate';
   const inputParam = hasInput ? `${inputName} input, ` : '';
-  const inputArg = hasInput ? 'input.toJson(),' : 'null,';
   const inputPass = hasInput ? 'input, ' : '';
+  const progressParams =
+    '{RpcCallContext? context, RpcProgressCallback? onSendProgress, RpcProgressCallback? onReceiveProgress}';
+  const progressArgs =
+    'context: context, onSendProgress: onSendProgress, onReceiveProgress: onReceiveProgress';
+  const contextExpr =
+    '(context ?? const RpcCallContext()).withProgress(onSendProgress: onSendProgress, onReceiveProgress: onReceiveProgress),';
+  f.trpcSymbols.add('RpcProgressCallback');
+
+  // ReadableStream<Uint8Array> root outputs stay streams: the method yields
+  // chunks as they arrive instead of buffering a Future.
+  if (outputIsStream) {
+    add(f, `class ${procClassName(path)} {`);
+    add(f, `  const ${procClassName(path)}(this._client);`);
+    add(f);
+    add(f, '  final RpcClient _client;');
+    add(f);
+    add(f, `  static const path = '${path}';`);
+    add(f);
+    add(f, `  RpcByteStream ${callMethod}(${inputParam}${progressParams}) async* {`);
+    add(f, '    final data = await _client.execute(');
+    add(f, '      RpcRequest(');
+    add(f, '        path: path,');
+    add(f, `        kind: RpcProcedureKind.${kind},`);
+    add(f, `        input: ${inputArg}`);
+    add(f, `        context: ${contextExpr}`);
+    add(f, '      ),');
+    add(f, '    );');
+    add(f, '    yield* RpcJson.asByteStream(data, path);');
+    add(f, '  }');
+    add(f, '}');
+    return f;
+  }
+
+  const decodeLine = outputIsBinary
+    ? `return ${decoderFor(em, f, record.output)}(data, path);`
+    : `return ${outputDart}.fromJson(RpcJson.asMap(data, path));`;
 
   const implementsClause = isQuery && hasInput
-    ? ` implements RpcWatchable<${inputName}, ${outputName}>`
+    ? ` implements RpcWatchable<${inputName}, ${outputDart}>`
     : isQuery
-      ? ' implements RpcWatchableNoInput<' + outputName + '>'
+      ? ' implements RpcWatchableNoInput<' + outputDart + '>'
       : '';
   add(f, `class ${procClassName(path)}${implementsClause} {`);
   add(f, `  const ${procClassName(path)}(this._client);`);
@@ -699,32 +847,32 @@ function renderProcedure(em: Emitter, path: string): FileCtx {
     }
     add(f);
   }
-  add(f, `  Future<${outputName}> ${callMethod}(${inputParam}{RpcCallContext? context}) async {`);
+  add(f, `  Future<${outputDart}> ${callMethod}(${inputParam}${progressParams}) async {`);
   add(f, '    final data = await _client.execute(');
   add(f, '      RpcRequest(');
   add(f, '        path: path,');
   add(f, `        kind: RpcProcedureKind.${kind},`);
   add(f, `        input: ${inputArg}`);
-  add(f, '        context: context,');
+  add(f, `        context: ${contextExpr}`);
   add(f, '      ),');
   add(f, '    );');
-  add(f, `    return ${outputName}.fromJson(RpcJson.asMap(data, path));`);
+  add(f, `    ${decodeLine}`);
   add(f, '  }');
   add(f);
-  add(f, `  Future<RpcResult<${outputName}>> ${safeMethod}(${inputParam}{RpcCallContext? context}) async {`);
+  add(f, `  Future<RpcResult<${outputDart}>> ${safeMethod}(${inputParam}${progressParams}) async {`);
   add(f, '    try {');
-  add(f, `      return RpcSuccess<${outputName}>(await ${callMethod}(${inputPass}context: context));`);
+  add(f, `      return RpcSuccess<${outputDart}>(await ${callMethod}(${inputPass}${progressArgs}));`);
   add(f, '    } on RpcException catch (error) {');
-  add(f, `      return RpcFailure<${outputName}>(error);`);
+  add(f, `      return RpcFailure<${outputDart}>(error);`);
   add(f, '    }');
   add(f, '  }');
   if (isQuery) {
     add(f);
     f.trpcSymbols.add('RpcQueryRef');
-    add(f, `  RpcQueryRef<${outputName}> watch(${inputParam}{RpcCallContext? context}) {`);
-    add(f, `    return _client.cache.watch<${outputName}>(`);
+    add(f, `  RpcQueryRef<${outputDart}> watch(${inputParam}${progressParams}) {`);
+    add(f, `    return _client.cache.watch<${outputDart}>(`);
     add(f, hasInput ? '      queryKey(input),' : '      queryKey,');
-    add(f, `      () => ${callMethod}(${inputPass}context: context),`);
+    add(f, `      () => ${callMethod}(${inputPass}${progressArgs}),`);
     add(f, '    );');
     add(f, '  }');
   }
@@ -785,7 +933,15 @@ function renderApi(em: Emitter, routerSegments: string[], rootLeaves: string[] =
   }
   add(f);
   const sorted = [...routerSegments].sort();
-  add(f, '/// Generated client bindings. Construct once with an [RpcClient].');
+  if (em.ir.protocol.kind === 'orpc') {
+    add(f, '/// Generated oRPC client bindings. Construct once with an [RpcClient]');
+    add(f, '/// whose termination link is an [OrpcLink] pointed at the RPCHandler');
+    add(f, "/// prefix, e.g. `RpcClient(endpoint: uri, links: [OrpcLink(endpoint: uri)])`.");
+  } else {
+    add(f, '/// Generated tRPC client bindings. Construct once with an [RpcClient]');
+    add(f, '/// whose termination link is an [HttpBatchLink] (optionally behind a');
+    add(f, '/// [SplitLink] for subscriptions).');
+  }
   add(f, 'class Api {');
   if (sorted.length > 0) {
     const initializers = sorted
@@ -831,7 +987,8 @@ function assembleFile(
   lines.push(`// Generated by rpc-dart ${GENERATOR_VERSION} (contract ${em.ir.hash.slice(0, 23)}).`);
   lines.push('');
   if (f.trpcSymbols.size > 0) {
-    lines.push(`import 'package:${RUNTIME_PACKAGE}/${RUNTIME_PACKAGE}.dart';`);
+    const pkg = runtimePackage(em);
+    lines.push(`import 'package:${pkg}/${pkg}.dart';`);
   }
   const modelImports = opts.imports ?? [];
   for (const imp of modelImports) lines.push(imp);

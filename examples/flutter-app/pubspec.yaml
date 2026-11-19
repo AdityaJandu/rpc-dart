@@ -10,6 +10,10 @@ dependencies:
     path: ../../packages/dart/trpc_dart
   trpc_flutter:
     path: ../../packages/dart/trpc_flutter
+  orpc_dart:
+    path: ../../packages/dart/orpc_dart
+  orpc_flutter:
+    path: ../../packages/dart/orpc_flutter
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -17,3 +21,9 @@ dev_dependencies:
 dependency_overrides:
   trpc_dart:
     path: ../../packages/dart/trpc_dart
+  trpc_flutter:
+    path: ../../packages/dart/trpc_flutter
+  orpc_dart:
+    path: ../../packages/dart/orpc_dart
+  orpc_flutter:
+    path: ../../packages/dart/orpc_flutter

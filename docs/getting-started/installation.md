@@ -28,9 +28,20 @@ npx rpc-dart watch                  # incremental regeneration next to your dev 
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.2.0          # pure Dart runtime (web-safe, no Flutter required)
-  trpc_flutter: ^0.2.0       # optional: ValueListenable bridge for widget trees
+  # tRPC backends:
+  trpc_dart: ^0.3.0          # pure Dart runtime (web-safe, no Flutter required)
+  trpc_flutter: ^0.3.0       # optional: ValueListenable bridge for widget trees
+  # oRPC backends — install the orpc_* facades instead:
+  orpc_dart: ^0.3.0          # oRPC runtime facade over trpc_dart (hides tRPC-only transports)
+  orpc_flutter: ^0.3.0       # optional: orpc_dart + the Flutter ValueListenable bridge
 ```
+
+oRPC users install the `orpc_dart` / `orpc_flutter` facades (they re-export the
+shared protocol-agnostic runtime and hide tRPC-only transports like HTTP
+batching and SuperJSON); tRPC users install `trpc_dart` / `trpc_flutter`. Pick
+the pair that matches your backend — generated oRPC bindings import
+`package:orpc_dart/orpc_dart.dart`, while tRPC bindings keep
+`package:trpc_dart/trpc_dart.dart`.
 
 ## Configuration
 

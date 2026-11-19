@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
+import '../binary.dart';
 import '../exceptions.dart';
 
 /// Zero-cast JSON decoding for generated models and the runtime wire engine.
@@ -111,6 +113,57 @@ class RpcJson {
       default:
         throw _typeError(path, 'BigInt', value);
     }
+  }
+
+  /// Accepts a [Uint8List] (oRPC-decoded), any `List<int>`, or a base64
+  /// string (tRPC superjson binary convention).
+  static Uint8List asBytes(Object? value, [String path = r'$']) {
+    switch (value) {
+      case final Uint8List v:
+        return v;
+      case final List<int> v:
+        return Uint8List.fromList(v);
+      case final String v:
+        try {
+          return base64Decode(v);
+        } on FormatException catch (error) {
+          throw RpcDecodeException(
+            'invalid base64 byte payload',
+            path: path,
+            expected: 'base64 String',
+            actual: v,
+            cause: error,
+          );
+        }
+      default:
+        throw _typeError(path, 'Uint8List', value);
+    }
+  }
+
+  /// Accepts an [RpcFile] (oRPC-decoded) or the tRPC superjson file shape
+  /// `{name, type?, data: base64}`.
+  static RpcFile asFile(Object? value, [String path = r'$']) {
+    switch (value) {
+      case final RpcFile v:
+        return v;
+      case final Map<String, Object?> v:
+        final name = asString(v['name'], '$path.name');
+        final bytes = asBytes(v['data'], '$path.data');
+        final type = switch (v['type']) {
+          final String t => t,
+          _ => null,
+        };
+        return RpcFile.bytes(name, bytes, contentType: type);
+      default:
+        throw _typeError(path, 'RpcFile', value);
+    }
+  }
+
+  /// Validates a streaming binary response body (`ReadableStream<Uint8Array>`
+  /// root outputs pass through the oRPC link as a byte stream).
+  static Stream<Uint8List> asByteStream(Object? value, [String path = r'$']) {
+    if (value case final Stream<Uint8List> v) return v;
+    throw _typeError(path, 'Stream<Uint8List>', value);
   }
 
   /// Validates that [value] is a [Map] and returns it, converting keys to [String].

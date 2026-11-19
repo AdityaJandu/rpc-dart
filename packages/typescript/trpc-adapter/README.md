@@ -31,13 +31,14 @@ pnpm add @rpc-dart/trpc-adapter
 ## Usage
 
 ```typescript
-import { extractTrpcContract } from '@rpc-dart/trpc-adapter';
+import { extractContract } from '@rpc-dart/trpc-adapter';
 
-const { contract, diagnostics } = await extractTrpcContract({
-  entry: './src/trpc/router.ts',
+const { ir, diagnostics } = await extractContract({
+  tsconfigPath: './tsconfig.json',
+  entryFile: './src/trpc/router.ts',
   exportName: 'appRouter',
-  transformer: 'superjson',
-  unknownPolicy: 'fail',
+  protocol: { kind: 'trpc', version: '11', transformer: 'superjson' },
+  policies: { unserializablePolicy: 'error' }, // 'warn-dynamic' | 'skip-procedure'
 });
 ```
 

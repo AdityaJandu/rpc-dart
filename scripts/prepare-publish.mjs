@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Prepares Dart packages for pub.dev publishing:
 // - Removes pubspec_overrides.yaml (dart pub publish rejects active dependency_overrides).
-// - Ensures trpc_dart: ^${VERSION} is set in packages/dart/trpc_flutter/pubspec.yaml.
-// - Ensures publish_to is absent in both pubspecs.
+// - Ensures sibling packages use hosted ^${VERSION} constraints in pubspec.yaml.
+// - Ensures publish_to is absent in every pubspec.
 // - Validates version matches release version.
 // Use `--restore` after publishing or validation to recreate pubspec_overrides.yaml
 // for local monorepo development.
@@ -16,32 +16,46 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VERSION = JSON.parse(
   readFileSync(path.join(ROOT, 'packages/typescript/core/package.json'), 'utf-8'),
 ).version;
-const PACKAGES = ['trpc_dart', 'trpc_flutter'];
+
+// Per-package dev overrides (path deps used only in the monorepo). trpc_dart is
+// the engine and has no sibling overrides.
+const PACKAGES = {
+  trpc_dart: {},
+  trpc_flutter: { trpc_dart: '../trpc_dart' },
+  orpc_dart: { trpc_dart: '../trpc_dart' },
+  orpc_flutter: {
+    orpc_dart: '../orpc_dart',
+    trpc_dart: '../trpc_dart',
+    trpc_flutter: '../trpc_flutter',
+  },
+};
+const SIBLINGS = Object.keys(PACKAGES);
 const restore = process.argv.includes('--restore');
 
-const FLUTTER_OVERRIDES_PATH = path.join(
-  ROOT,
-  'packages/dart/trpc_flutter/pubspec_overrides.yaml',
-);
+function overridesPath(pkg) {
+  return path.join(ROOT, 'packages/dart', pkg, 'pubspec_overrides.yaml');
+}
+
+function hostedSiblings(pubspec) {
+  let out = pubspec;
+  for (const sibling of SIBLINGS) {
+    out = out.replace(
+      new RegExp(`^(\\s*)${sibling}:\\s*\\n\\s*path:\\s*.*$`, 'm'),
+      `$1${sibling}: ^${VERSION}`,
+    );
+  }
+  return out;
+}
 
 function prepare(pkg) {
   const pubspecPath = path.join(ROOT, 'packages/dart', pkg, 'pubspec.yaml');
   if (!existsSync(pubspecPath)) throw new Error(`missing ${pubspecPath}`);
   let pubspec = readFileSync(pubspecPath, 'utf-8');
 
-  // 1. Ensure publish_to: none is absent so repository provenance passes.
   pubspec = pubspec.replace(/^publish_to:\s*none\s*\n/m, '');
-
-  // 2. Ensure hosted version constraint is used on sibling packages.
-  pubspec = pubspec.replace(
-    /^(\s*)trpc_dart:\s*\n\s*path:\s*.*$/m,
-    `$1trpc_dart: ^${VERSION}`,
-  );
-
-  // 3. Remove inline dependency_overrides if any exist.
+  pubspec = hostedSiblings(pubspec);
   pubspec = pubspec.replace(/^dependency_overrides:\s*\n(?:\s+.*\n)*/m, '');
 
-  // 4. Verify version matches release.
   const version = /^version:\s*(.+)$/m.exec(pubspec)?.[1]?.trim();
   if (version !== VERSION) {
     throw new Error(`${pkg} version ${version} does not match release ${VERSION}`);
@@ -49,10 +63,8 @@ function prepare(pkg) {
 
   writeFileSync(pubspecPath, pubspec);
 
-  // 5. Remove pubspec_overrides.yaml (pub publish rejects packages with overrides).
-  if (existsSync(FLUTTER_OVERRIDES_PATH)) {
-    rmSync(FLUTTER_OVERRIDES_PATH);
-  }
+  const overrides = overridesPath(pkg);
+  if (existsSync(overrides)) rmSync(overrides);
 
   console.log(`prepared packages/dart/${pkg} (version ${version}, publish-ready)`);
 }
@@ -61,28 +73,27 @@ function restoreDev(pkg) {
   const pubspecPath = path.join(ROOT, 'packages/dart', pkg, 'pubspec.yaml');
   let pubspec = readFileSync(pubspecPath, 'utf-8');
 
-  // 1. Ensure publish_to: none is never present in committed manifests.
   pubspec = pubspec.replace(/^publish_to:\s*none\s*\n/m, '');
-
-  // 2. Ensure hosted constraint stays clean in pubspec.yaml.
-  pubspec = pubspec.replace(
-    /^(\s*)trpc_dart:\s*\n\s*path:\s*.*$/m,
-    `$1trpc_dart: ^${VERSION}`,
-  );
-
+  pubspec = hostedSiblings(pubspec);
   writeFileSync(pubspecPath, pubspec);
 
-  // 3. Recreate pubspec_overrides.yaml for local development.
-  const overridesContent = `dependency_overrides:\n  trpc_dart:\n    path: ../trpc_dart\n`;
-  writeFileSync(FLUTTER_OVERRIDES_PATH, overridesContent);
+  const overrides = PACKAGES[pkg];
+  const entries = Object.entries(overrides);
+  if (entries.length > 0) {
+    const content =
+      'dependency_overrides:\n' +
+      entries.map(([name, rel]) => `  ${name}:\n    path: ${rel}\n`).join('');
+    writeFileSync(overridesPath(pkg), content);
+  }
 
   console.log(`restored packages/dart/${pkg} (monorepo dev state)`);
 }
 
+const names = Object.keys(PACKAGES);
 if (restore) {
-  for (const pkg of [...PACKAGES].reverse()) restoreDev(pkg);
+  for (const pkg of [...names].reverse()) restoreDev(pkg);
   console.log('restore complete');
 } else {
-  for (const pkg of PACKAGES) prepare(pkg);
+  for (const pkg of names) prepare(pkg);
   console.log('publish preparation complete');
 }

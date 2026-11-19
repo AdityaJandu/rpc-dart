@@ -1,6 +1,6 @@
 {
   "name": "@rpc-dart/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Contract IR types, canonical serialization, and structured diagnostics for rpc-dart.",
   "type": "module",
   "main": "dist/index.js",

@@ -114,8 +114,12 @@ export default defineConfig({
   // Path to the TypeScript file exporting the router
   entry: './src/server/router.ts',
 
-  // Name of the exported router constant (default: 'appRouter')
+  // Name of the exported router constant (required; `init` guesses it for you)
   exportName: 'appRouter',
+
+  // Extraction adapter: 'trpc' | 'orpc' | 'auto' (default).
+  // 'auto' probes the export's shape (tRPC _def vs oRPC ~orpc).
+  adapter: 'auto',
 
   // Transformer matching initTRPC ({ transformer })
   // Options: 'superjson' | 'json'
@@ -127,9 +131,11 @@ export default defineConfig({
     outDir: '../client/lib/src/api',
   },
 
-  // Policy for non-discriminated or unknown types
-  // Options: 'fail' (default) | 'warn-dynamic' | 'skip-procedure'
-  unknownPolicy: 'fail',
+  // Policy for unserializable or unknown types
+  policies: {
+    // Options: 'error' (default) | 'warn-dynamic' | 'skip-procedure'
+    unserializablePolicy: 'error',
+  },
 });
 ```
 
@@ -141,7 +147,7 @@ In your Flutter or Dart project, add [`trpc_dart`](https://pub.dev/packages/trpc
 
 ```yaml
 dependencies:
-  trpc_dart: ^0.2.0
+  trpc_dart: ^0.3.0
 ```
 
 Initialize the client with the generated `Api` class:

@@ -134,4 +134,40 @@ void main() {
     expect(dataStates.last['id'], 'u1');
     await sub.cancel();
   });
+
+  group('tRPC binary convention (superjson custom annotations)', () {
+    late RpcClient binaryClient;
+    setUpAll(() {
+      final binaryEndpoint = Uri.parse('http://127.0.0.1:$port/trpc-binary');
+      binaryClient = RpcClient(
+        endpoint: binaryEndpoint,
+        transformer: RpcTransformer.superjson,
+        links: [HttpBatchLink(endpoint: binaryEndpoint)],
+      );
+    });
+
+    test('Uint8Array round-trips through base64 annotations', () async {
+      final payload = Uint8List.fromList(List.generate(2048, (i) => i % 256));
+      final data = await binaryClient.execute(RpcRequest(
+        path: 'bytes.echo',
+        kind: RpcProcedureKind.mutation,
+        input: payload,
+      ));
+      expect(RpcJson.asBytes(data), payload);
+    });
+
+    test('RpcFile uploads decode to File on the server', () async {
+      final data = await binaryClient.execute(RpcRequest(
+        path: 'files.upload',
+        kind: RpcProcedureKind.mutation,
+        input: <String, Object?>{
+          'file': RpcFile.bytes('doc.bin', Uint8List.fromList([1, 2, 3, 4]),
+              contentType: 'application/octet-stream'),
+        },
+      ));
+      final json = RpcJson.asMap(data);
+      expect(RpcJson.asString(json['name']), 'doc.bin');
+      expect(RpcJson.asInt(json['size']), 4);
+    });
+  });
 }
